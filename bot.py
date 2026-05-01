@@ -24,7 +24,6 @@ PROVINCIAS = [
     "Valladolid","Zamora","Zaragoza"
 ]
 
-# Tramites por provincia (common tramites — customise as needed)
 TRAMITES_DEFAULT = [
     "TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA)",
     "RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
@@ -57,7 +56,6 @@ TRAMITES_EXTRA = {
 def get_tramites(provincia):
     return TRAMITES_EXTRA.get(provincia, TRAMITES_DEFAULT)
 
-# Oficinas por provincia
 OFICINAS = {
     "Madrid": [
         "OFICINA DE EXTRANJERÍA MADRID CENTRAL, C/ ADUANA, 27",
@@ -90,20 +88,20 @@ OFICINA_DEFAULT = ["OFICINA CENTRAL DE EXTRANJERÍA", "COMISARÍA PROVINCIAL"]
 def get_oficinas(provincia):
     return OFICINAS.get(provincia, OFICINA_DEFAULT)
 
-# ── HELPERS ─────────────────────────────────────────────────────────────────
+# Web server URL — Railway sets RAILWAY_PUBLIC_DOMAIN automatically
+WEB_URL = os.environ.get("WEB_URL", "")
 
 active_searches: dict = {}
 
+# ── KEYBOARDS ────────────────────────────────────────────────────────────────
+
 def province_keyboard():
-    kb = []
-    row = []
+    kb, row = [], []
     for i, p in enumerate(PROVINCIAS):
         row.append(InlineKeyboardButton(p, callback_data=f"prov_{i}"))
         if len(row) == 3:
-            kb.append(row)
-            row = []
-    if row:
-        kb.append(row)
+            kb.append(row); row = []
+    if row: kb.append(row)
     return InlineKeyboardMarkup(kb)
 
 def list_keyboard(items, prefix):
@@ -111,7 +109,7 @@ def list_keyboard(items, prefix):
         [[InlineKeyboardButton(t, callback_data=f"{prefix}_{i}")] for i, t in enumerate(items)]
     )
 
-# ── HANDLERS ────────────────────────────────────────────────────────────────
+# ── HANDLERS ─────────────────────────────────────────────────────────────────
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -132,8 +130,7 @@ async def nueva(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def sel_provincia(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    idx = int(q.data.split("_")[1])
-    provincia = PROVINCIAS[idx]
+    provincia = PROVINCIAS[int(q.data.split("_")[1])]
     context.user_data["provincia"] = provincia
     tramites = get_tramites(provincia)
     context.user_data["tramites_list"] = tramites
@@ -146,17 +143,14 @@ async def sel_provincia(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def sel_tramite(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    idx = int(q.data.split("_")[1])
-    tramite = context.user_data["tramites_list"][idx]
+    tramite = context.user_data["tramites_list"][int(q.data.split("_")[1])]
     context.user_data["tramite"] = tramite
     provincia = context.user_data["provincia"]
     oficinas = get_oficinas(provincia)
     context.user_data["oficinas_list"] = oficinas
     kb_items = ["Cualquier oficina"] + oficinas
     await q.edit_message_text(
-        f"📍 Provincia: {provincia}\n"
-        f"🔍 Trámite: {tramite[:40]}\n\n"
-        f"Selecciona la oficina:",
+        f"📍 Provincia: {provincia}\n🔍 Trámite: {tramite[:40]}\n\nSelecciona la oficina:",
         reply_markup=list_keyboard(kb_items, "ofic")
     )
     return SELECT_OFICINA
@@ -164,9 +158,8 @@ async def sel_tramite(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def sel_oficina(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    idx = int(q.data.split("_")[1])
     kb_items = ["Cualquier oficina"] + context.user_data["oficinas_list"]
-    context.user_data["oficina"] = kb_items[idx]
+    context.user_data["oficina"] = kb_items[int(q.data.split("_")[1])]
     await q.edit_message_text("Escribe tu NIE o Pasaporte:")
     return ENTER_NIE
 
@@ -184,7 +177,7 @@ async def enter_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["telefono"] = update.message.text
     d = context.user_data
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Confirmar y Monitorear", callback_data="yes")],
+        [InlineKeyboardButton("✅ Confirmar", callback_data="yes")],
         [InlineKeyboardButton("❌ Cancelar", callback_data="no")]
     ])
     await update.message.reply_text(
@@ -214,16 +207,32 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     search_id = len(active_searches[user_id]) + 1
     active_searches[user_id].append({"id": search_id, "data": data, "active": True})
 
+    # Build form URL with pre-filled params
+    import urllib.parse
+    params = urllib.parse.urlencode({
+        "uid": user_id,
+        "sid": search_id,
+        "oficina": data["oficina"],
+        "provincia": data["provincia"],
+        "tramite": data["tramite"],
+        "nie": data["nie"],
+        "nombre": data["nombre"],
+        "tel": data["telefono"],
+    })
+    form_url = f"{WEB_URL}/form?{params}"
+
     await q.edit_message_text(
         f"✅ Búsqueda #{search_id} iniciada!\n\n"
-        f"🤖 Monitoreando ICP Clave cada 3 minutos.\n"
-        f"📲 Te avisaré cuando haya cita disponible!\n\n"
+        f"📝 Rellena el formulario para completar la solicitud\n"
+        f"(enlace válido por 24h)\n\n"
+        f"🔗 {form_url}\n\n"
+        f"🤖 El bot monitoreará ICP Clave cada 3 minutos.\n"
         f"/mis_busquedas - Ver estado"
     )
     asyncio.create_task(monitor_icp(user_id, search_id, data, context.application.bot))
     return ConversationHandler.END
 
-# ── MONITOR ─────────────────────────────────────────────────────────────────
+# ── MONITOR ──────────────────────────────────────────────────────────────────
 
 async def monitor_icp(user_id: int, search_id: int, data: dict, bot):
     attempt = 0
@@ -234,10 +243,8 @@ async def monitor_icp(user_id: int, search_id: int, data: dict, bot):
             search = next((s for s in searches if s["id"] == search_id), None)
             if not search or not search["active"]:
                 break
-
-            logger.info(f"Check ICP — user {user_id} search #{search_id} attempt {attempt}")
+            logger.info(f"Check ICP — user {user_id} #{search_id} attempt {attempt}")
             available = await check_icp_availability(data)
-
             if available:
                 await bot.send_message(
                     chat_id=user_id,
@@ -246,7 +253,7 @@ async def monitor_icp(user_id: int, search_id: int, data: dict, bot):
                         f"📍 Provincia: {data['provincia']}\n"
                         f"🔍 Trámite: {data['tramite'][:50]}\n"
                         f"🏢 Oficina: {data['oficina'][:50]}\n\n"
-                        f"🔗 Ve AHORA a reservar:\n"
+                        f"🔗 Ve AHORA:\n"
                         f"https://icp.administracionelectronica.gob.es/icpplus/index.html\n\n"
                         f"⚡ ¡Las citas se agotan rápido!"
                     )
@@ -275,7 +282,7 @@ async def check_icp_availability(data: dict) -> bool:
         logger.error(f"ICP check error: {e}")
     return False
 
-# ── SEARCHES ────────────────────────────────────────────────────────────────
+# ── OTHER COMMANDS ────────────────────────────────────────────────────────────
 
 async def mis_busquedas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -309,13 +316,13 @@ async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def ayuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "📖 Ayuda:\n\n"
-        "/nueva_busqueda - Iniciar nueva búsqueda de cita\n"
-        "/mis_busquedas - Ver estado de búsquedas activas\n"
+        "/nueva_busqueda - Iniciar nueva búsqueda\n"
+        "/mis_busquedas - Ver búsquedas activas\n"
         "/ayuda - Mostrar esta ayuda\n\n"
-        "El bot monitorea ICP Clave cada 3 minutos y te avisa cuando haya cita disponible."
+        "El bot monitorea ICP Clave cada 3 minutos."
     )
 
-# ── MAIN ────────────────────────────────────────────────────────────────────
+# ── MAIN ─────────────────────────────────────────────────────────────────────
 
 def main():
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
