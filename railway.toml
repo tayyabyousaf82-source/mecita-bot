@@ -1,14 +1,6 @@
-document.getElementById("save").addEventListener("click", () => {
-  const key = document.getElementById("key").value.trim();
-  if (key) {
-    chrome.storage.sync.set({ apiKey: key }, () => {
-      alert("✅ API key saved! You can now use the solver.");
-      window.close();
-    });
-  }
-});
+[build]
+builder = "nixpacks"
 
-// Load current key
-chrome.storage.sync.get("apiKey", (data) => {
-  if (data.apiKey) document.getElementById("key").value = data.apiKey;
-});
+[deploy]
+startCommand = "python web.py & python bot.py"
+restartPolicyType = "on_failure"
