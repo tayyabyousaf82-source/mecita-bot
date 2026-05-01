@@ -1,0 +1,3 @@
+[deploy]
+startCommand = "playwright install chromium && python bot.py"
+restartPolicyType = "on_failure"
