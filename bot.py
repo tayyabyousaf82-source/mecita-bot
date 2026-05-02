@@ -12,13 +12,12 @@ logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TELEGRAM_TOKEN = "8719883446:AAHBcWG_VNvxd25NTGWPrVC_TDPiP47UIzc"
-BASE_URL = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "http://localhost:5000")
+BASE_URL = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "mecita-bot-production.up.railway.app")
 
-(WAITING_PROVINCIA, WAITING_TRAMITE, WAITING_OFICINA,
- WAITING_NIE, WAITING_NOMBRE, WAITING_ANO, WAITING_PAIS,
- WAITING_TELEFONO, WAITING_EMAIL, WAITING_FECHA_MIN, WAITING_FECHA_MAX) = range(11)
+WAITING_PROVINCIA, WAITING_TRAMITE, WAITING_OFICINA = range(3)
 
 SORTED_PROVINCIAS = sorted(PROVINCIA_DATA.items(), key=lambda x: x[1]["name"])
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -43,6 +42,8 @@ async def cancelar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("❌ Operación cancelada.")
     return ConversationHandler.END
 
+
+# STEP 1 — Provincia
 async def nueva_busqueda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = []
     for i in range(0, len(SORTED_PROVINCIAS), 2):
@@ -60,6 +61,8 @@ async def nueva_busqueda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return WAITING_PROVINCIA
 
+
+# STEP 2 — Tramite
 async def seleccionar_provincia(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -79,6 +82,8 @@ async def seleccionar_provincia(update: Update, context: ContextTypes.DEFAULT_TY
     )
     return WAITING_TRAMITE
 
+
+# STEP 3 — Oficina
 async def seleccionar_tramite(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -105,108 +110,39 @@ async def seleccionar_tramite(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
     return WAITING_OFICINA
 
+
+# FINAL — Oficina selected → send form link directly
 async def seleccionar_oficina(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     idx = int(query.data.replace("ofic_", ""))
     pid = context.user_data["provincia_id"]
     oficina = PROVINCIA_DATA[pid]["oficinas"][idx]
-    context.user_data["oficina"] = oficina
-    await query.edit_message_text(
-        f"✅ *Selección completada:*\n\n"
-        f"📍 {context.user_data['provincia_name']}\n"
-        f"📋 {context.user_data['tramite_name']}\n"
-        f"🏢 {oficina}\n\n"
-        f"Ahora escribe tus datos...",
-        parse_mode="Markdown"
-    )
-    await query.message.reply_text("📄 *NIE o Pasaporte*:", parse_mode="Markdown")
-    return WAITING_NIE
+    provincia = context.user_data["provincia_name"]
+    tramite = context.user_data["tramite_name"]
 
-async def recibir_nie(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["nie"] = update.message.text.strip().upper()
-    await update.message.reply_text("👤 *Nombre y Apellidos*:", parse_mode="Markdown")
-    return WAITING_NOMBRE
-
-async def recibir_nombre(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["nombre"] = update.message.text.strip()
-    await update.message.reply_text("🎂 *Año de nacimiento* (ej: 1990):", parse_mode="Markdown")
-    return WAITING_ANO
-
-async def recibir_ano(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["ano"] = update.message.text.strip()
-    await update.message.reply_text("🌍 *País de nacionalidad* (ej: PAKISTAN):", parse_mode="Markdown")
-    return WAITING_PAIS
-
-async def recibir_pais(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["pais"] = update.message.text.strip().upper()
-    await update.message.reply_text("📱 *Teléfono*:", parse_mode="Markdown")
-    return WAITING_TELEFONO
-
-async def recibir_telefono(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["telefono"] = update.message.text.strip()
-    await update.message.reply_text("📧 *Email* (o `skip`):", parse_mode="Markdown")
-    return WAITING_EMAIL
-
-async def recibir_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    txt = update.message.text.strip()
-    context.user_data["email"] = "" if txt.lower() == "skip" else txt
-    await update.message.reply_text(
-        "📅 *Fecha mínima* (DD/MM/YYYY)\nEj: 01/06/2026",
-        parse_mode="Markdown"
-    )
-    return WAITING_FECHA_MIN
-
-async def recibir_fecha_min(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["fecha_min"] = update.message.text.strip()
-    await update.message.reply_text(
-        "📅 *Fecha máxima* (DD/MM/YYYY)\nEj: 31/12/2026",
-        parse_mode="Markdown"
-    )
-    return WAITING_FECHA_MAX
-
-async def recibir_fecha_max(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["fecha_max"] = update.message.text.strip()
-    await enviar_form_link(update, context)
-    return ConversationHandler.END
-
-async def enviar_form_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    d = context.user_data
+    # Build form URL with pre-filled oficina/tramite/provincia
     params = {
-        "nie": d.get("nie", ""),
-        "nombre": d.get("nombre", ""),
-        "ano": d.get("ano", ""),
-        "pais": d.get("pais", ""),
-        "telefono": d.get("telefono", ""),
-        "email": d.get("email", ""),
-        "fecha_min": d.get("fecha_min", ""),
-        "fecha_max": d.get("fecha_max", ""),
-        "oficina": d.get("oficina", ""),
-        "tramite": d.get("tramite_name", ""),
-        "provincia": d.get("provincia_name", ""),
+        "oficina": oficina,
+        "tramite": tramite,
+        "provincia": provincia,
     }
     form_url = f"https://{BASE_URL}/form?{urlencode(params)}"
 
-    resumen = (
-        f"✅ *Resumen:*\n\n"
-        f"📍 {d.get('provincia_name')}\n"
-        f"📋 {d.get('tramite_name')}\n"
-        f"🏢 {d.get('oficina')}\n\n"
-        f"📄 NIE: `{d.get('nie')}`\n"
-        f"👤 {d.get('nombre')}\n"
-        f"🎂 {d.get('ano')}\n"
-        f"🌍 {d.get('pais')}\n"
-        f"📱 {d.get('telefono')}\n"
-        f"📅 {d.get('fecha_min')} → {d.get('fecha_max')}\n\n"
-        f"👇 *Abre el formulario — datos ya rellenados:*"
-    )
     keyboard = [[InlineKeyboardButton("📋 Abrir Formulario ICP Clave", url=form_url)]]
-    await update.message.reply_text(
-        resumen,
+
+    await query.edit_message_text(
+        f"✅ *Selección completada:*\n\n"
+        f"📍 Provincia: {provincia}\n"
+        f"📋 Trámite: {tramite}\n"
+        f"🏢 Oficina: {oficina}\n\n"
+        f"👇 *Abre el formulario y rellena tus datos:*",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
     context.user_data.clear()
+    return ConversationHandler.END
+
 
 def main():
     app = Application.builder().token(TELEGRAM_TOKEN).build()
@@ -216,14 +152,6 @@ def main():
             WAITING_PROVINCIA: [CallbackQueryHandler(seleccionar_provincia, pattern="^prov_")],
             WAITING_TRAMITE:   [CallbackQueryHandler(seleccionar_tramite, pattern="^tram_")],
             WAITING_OFICINA:   [CallbackQueryHandler(seleccionar_oficina, pattern="^ofic_")],
-            WAITING_NIE:       [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_nie)],
-            WAITING_NOMBRE:    [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_nombre)],
-            WAITING_ANO:       [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_ano)],
-            WAITING_PAIS:      [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_pais)],
-            WAITING_TELEFONO:  [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_telefono)],
-            WAITING_EMAIL:     [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_email)],
-            WAITING_FECHA_MIN: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_fecha_min)],
-            WAITING_FECHA_MAX: [MessageHandler(filters.TEXT & ~filters.COMMAND, recibir_fecha_max)],
         },
         fallbacks=[CommandHandler("cancelar", cancelar)],
         allow_reentry=True,
