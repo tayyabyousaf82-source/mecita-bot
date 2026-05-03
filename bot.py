@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 def province_keyboard(page=0):
     provs = sorted(PROVINCIA_DATA.items(), key=lambda x: x[1]["name"])
-    per = 18
+    per = 30
     chunk = provs[page*per:(page+1)*per]
     rows = []
     row = []
