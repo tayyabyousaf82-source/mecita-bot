@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MiCitaBot — Reservar Cita</title>
+<style>
+  :root {
+    --bg: #0f1923;
+    --card: #1a2535;
+    --card2: #212f42;
+    --accent: #4e9de0;
+    --accent2: #3bc67e;
+    --danger: #e05c5c;
+    --text: #dde6f0;
+    --muted: #7a94b0;
+    --border: #2a3d55;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1a2d47, #0f1f35);
+    padding: 24px 20px 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 { font-size: 22px; color: #fff; }
+  .header p  { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  /* Progress */
+  .progress-wrap {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 18px 20px 0;
+  }
+  .step-dot {
+    width: 32px; height: 4px;
+    border-radius: 4px;
+    background: var(--border);
+    transition: background .3s;
+  }
+  .step-dot.active  { background: var(--accent); }
+  .step-dot.done    { background: var(--accent2); }
+
+  /* Sections */
+  .section {
+    display: none;
+    padding: 20px 16px 0;
+    animation: fadeIn .25s ease;
+  }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Province Grid */
+  .search-box {
+    width: 100%;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 10px 16px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    margin-bottom: 12px;
+  }
+  .prov-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    max-height: 340px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .prov-btn {
+    background: var(--card2);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 10px 4px;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: all .15s;
+  }
+  .prov-btn:hover  { border-color: var(--accent); }
+  .prov-btn.selected { border-color: var(--accent); background: #1e3550; color: #fff; }
+
+  /* Tramite List */
+  .tramite-list { display: flex; flex-direction: column; gap: 8px; }
+  .tramite-btn {
+    background: var(--card2);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 13px 14px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all .15s;
+  }
+  .tramite-btn:hover    { border-color: var(--accent); }
+  .tramite-btn.selected { border-color: var(--accent); background: #1e3550; }
+  .tramite-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Office List */
+  .office-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
+  .office-btn {
+    background: var(--card2);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    transition: all .15s;
+  }
+  .office-btn:hover    { border-color: var(--accent2); }
+  .office-btn.selected { border-color: var(--accent2); background: #1a3528; }
+  .office-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Form Fields */
+  .form-group { margin-bottom: 14px; }
+  .form-label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-input, .form-select {
+    width: 100%;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+    appearance: none;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-input.error { border-color: var(--danger); }
+  .error-msg { color: var(--danger); font-size: 11px; margin-top: 4px; display: none; }
+  .error-msg.show { display: block; }
+
+  /* Calendar Date Range */
+  .calendar-wrap {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .cal-title { font-weight: 700; font-size: 15px; }
+  .cal-nav {
+    background: var(--card);
+    border: none;
+    color: var(--accent);
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 8px;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .cal-day-name {
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    padding: 4px 0;
+    font-weight: 600;
+  }
+  .cal-day {
+    text-align: center;
+    padding: 7px 2px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+    border: 1px solid transparent;
+  }
+  .cal-day:hover:not(.empty):not(.past) { background: var(--card); border-color: var(--accent); }
+  .cal-day.empty  { cursor: default; }
+  .cal-day.past   { color: var(--border); cursor: default; }
+  .cal-day.start  { background: var(--accent); color: #fff; border-radius: 8px 0 0 8px; }
+  .cal-day.end    { background: var(--accent); color: #fff; border-radius: 0 8px 8px 0; }
+  .cal-day.in-range { background: #1e3550; color: var(--text); border-radius: 0; }
+  .cal-day.start.end { border-radius: 8px; }
+  .cal-day.today  { border-color: var(--accent2); color: var(--accent2); font-weight: 700; }
+
+  .date-range-display {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .date-chip {
+    flex: 1;
+    background: var(--card);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .date-chip span { display: block; color: var(--text); font-weight: 600; font-size: 13px; margin-top: 2px; }
+
+  /* Summary Card */
+  .summary-card {
+    background: var(--card2);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .summary-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-icon { font-size: 16px; flex-shrink: 0; }
+  .summary-label { color: var(--muted); font-size: 11px; }
+  .summary-val   { font-weight: 600; }
+
+  /* Buttons */
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+    margin-top: 8px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #3d8fd4; }
+  .btn-success { background: var(--accent2); color: #fff; }
+  .btn-back {
+    background: var(--card2);
+    color: var(--muted);
+    margin-top: 10px;
+  }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* Success Screen */
+  .success-screen {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .success-icon { font-size: 64px; margin-bottom: 16px; }
+  .success-title { font-size: 22px; font-weight: 700; color: var(--accent2); }
+  .success-sub { color: var(--muted); margin-top: 8px; font-size: 14px; }
+  .booking-id {
+    background: var(--card2);
+    border-radius: 10px;
+    padding: 12px;
+    margin: 16px 0;
+    font-family: monospace;
+    font-size: 18px;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🤖 MiCitaBot</h1>
+  <p>Reserva tu cita de Extranjería automáticamente</p>
+</div>
+
+<!-- Progress Dots -->
+<div class="progress-wrap">
+  <div class="step-dot active" id="dot1"></div>
+  <div class="step-dot" id="dot2"></div>
+  <div class="step-dot" id="dot3"></div>
+  <div class="step-dot" id="dot4"></div>
+  <div class="step-dot" id="dot5"></div>
+  <div class="step-dot" id="dot6"></div>
+</div>
+
+<!-- STEP 1: Province -->
+<div class="section active" id="step1">
+  <div class="section-title">🗺️ Selecciona la Provincia</div>
+  <input class="search-box" type="text" placeholder="🔍  Buscar provincia..." id="provSearch" oninput="filterProvinces()"/>
+  <div class="prov-grid" id="provGrid"></div>
+  <button class="btn btn-primary" id="btnStep1" onclick="goStep(2)" disabled>Siguiente →</button>
+</div>
+
+<!-- STEP 2: Tramite -->
+<div class="section" id="step2">
+  <div class="section-title">📋 Selecciona el Trámite</div>
+  <div class="tramite-list" id="tramiteList"></div>
+  <button class="btn btn-back" onclick="goStep(1)">← Volver</button>
+  <button class="btn btn-primary" id="btnStep2" onclick="goStep(3)" disabled>Siguiente →</button>
+</div>
+
+<!-- STEP 3: Office -->
+<div class="section" id="step3">
+  <div class="section-title">🏢 Selecciona la Oficina</div>
+  <div class="office-list" id="officeList"></div>
+  <button class="btn btn-back" onclick="goStep(2)">← Volver</button>
+  <button class="btn btn-primary" id="btnStep3" onclick="goStep(4)" disabled>Siguiente →</button>
+</div>
+
+<!-- STEP 4: Date Range -->
+<div class="section" id="step4">
+  <div class="section-title">📅 Rango de Fechas para Buscar</div>
+  <div class="calendar-wrap">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="prevMonth()">‹</button>
+      <span class="cal-title" id="calTitle"></span>
+      <button class="cal-nav" onclick="nextMonth()">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="date-range-display">
+      <div class="date-chip">Desde<span id="displayFrom">—</span></div>
+      <div class="date-chip">Hasta<span id="displayTo">—</span></div>
+    </div>
+  </div>
+  <p style="color:var(--muted);font-size:12px;text-align:center;margin-bottom:8px;">
+    ℹ️ El bot buscará citas dentro de este rango 24/7
+  </p>
+  <button class="btn btn-back" onclick="goStep(3)">← Volver</button>
+  <button class="btn btn-primary" id="btnStep4" onclick="goStep(5)" disabled>Siguiente →</button>
+</div>
+
+<!-- STEP 5: Personal Data -->
+<div class="section" id="step5">
+  <div class="section-title">👤 Datos Personales</div>
+
+  <div class="form-group">
+    <label class="form-label">Nombre *</label>
+    <input class="form-input" id="nombre" type="text" placeholder="Ej: Sara Isabel"/>
+    <div class="error-msg" id="err_nombre">Campo obligatorio</div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Apellido/s *</label>
+    <input class="form-input" id="apellido" type="text" placeholder="Ej: Betancur Soto"/>
+    <div class="error-msg" id="err_apellido">Campo obligatorio</div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">NIE / Pasaporte *</label>
+    <input class="form-input" id="nie" type="text" placeholder="Ej: X1234567A"/>
+    <div class="error-msg" id="err_nie">Formato inválido</div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Fecha de Nacimiento *</label>
+    <input class="form-input" id="fecha_nac" type="date"/>
+    <div class="error-msg" id="err_fecha">Campo obligatorio</div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Nacionalidad *</label>
+    <input class="form-input" id="nacionalidad" type="text" placeholder="Ej: Colombiana"/>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Email *</label>
+    <input class="form-input" id="email" type="email" placeholder="Ej: ejemplo@gmail.com"/>
+    <div class="error-msg" id="err_email">Email inválido</div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Teléfono (con prefijo) *</label>
+    <input class="form-input" id="telefono" type="tel" placeholder="Ej: +34612345678"/>
+    <div class="error-msg" id="err_tel">Formato inválido</div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Telegram User ID *</label>
+    <input class="form-input" id="telegram_id" type="number" placeholder="Tu ID de Telegram (de @myidbot)"/>
+    <div class="error-msg" id="err_tid">Campo obligatorio</div>
+  </div>
+
+  <button class="btn btn-back" onclick="goStep(4)">← Volver</button>
+  <button class="btn btn-primary" onclick="goStep(6)">Ver Resumen →</button>
+</div>
+
+<!-- STEP 6: Summary + Submit -->
+<div class="section" id="step6">
+  <div class="section-title">✅ Confirmar y Reservar</div>
+  <div class="summary-card" id="summaryCard"></div>
+  <button class="btn btn-back" onclick="goStep(5)">← Editar</button>
+  <button class="btn btn-success" onclick="submitBooking()">🚀 Iniciar Búsqueda Automática</button>
+</div>
+
+<!-- SUCCESS -->
+<div class="section" id="stepSuccess">
+  <div class="success-screen">
+    <div class="success-icon">🎉</div>
+    <div class="success-title">¡Solicitud Enviada!</div>
+    <div class="success-sub">Tu Booking ID:</div>
+    <div class="booking-id" id="bookingIdDisplay"></div>
+    <div style="background:#1a3528;border-radius:12px;padding:14px;margin:16px 0;text-align:left">
+      <p style="color:#3bc67e;font-weight:700;margin-bottom:8px">✅ ¿Qué pasa ahora?</p>
+      <p style="color:var(--text);font-size:13px;line-height:1.8">
+        🤖 El bot busca cita <strong>24/7</strong> automáticamente<br/>
+        📅 Dentro del rango de fechas que elegiste<br/>
+        📲 Recibirás notificación en <strong>Telegram</strong><br/>
+        📄 PDF de confirmación se enviará al bot<br/>
+        🔄 Si no hay cita, reintenta cada 5 minutos
+      </p>
+    </div>
+    <p style="color:var(--muted);font-size:12px">
+      Puedes cerrar esta página. Todo lo demás lo hace el bot.
+    </p>
+  </div>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────────
+const PROVINCIAS = {
+  "15":{"name":"A Coruña","tramites":{"4010":"TOMA DE HUELLAS (TIE)","4036":"ASIGNACIÓN DE NIE","4031":"AUTORIZACIÓN DE REGRESO","4037":"CARTA DE INVITACIÓN","20":"CERTIFICADO REGISTRO UE","4038":"RECOGIDA TIE"},"oficinas":["CNP - COMISARIA A CORUÑA - C/ RAMON Y CAJAL 4","CNP - COMISARIA FERROL - C/ DOLORES 1","CNP - COMISARIA SANTIAGO DE COMPOSTELA - C/ HORREO 4"]},
+  "3":{"name":"Alicante","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4094":"BREXIT (Tarjeta Británicos)","4031":"CERTIFICADO REGISTRO UE","4037":"CARTA DE INVITACIÓN","20":"RECOGIDA TIE","4079":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA ALICANTE CENTRO","CNP - COMISARIA BENIDORM","CNP - COMISARIA DENIA","CNP - COMISARIA ELCHE","CNP - COMISARIA ELDA","CNP - COMISARIA ORIHUELA","CNP - COMISARIA TORREVIEJA","CNP - COMISARIA VILLENA"]},
+  "8":{"name":"Barcelona","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4094":"BREXIT (Tarjeta Británicos)","4037":"CARTA DE INVITACIÓN","4038":"CERTIFICADO REGISTRO UE","4049":"CERTIFICADOS RESIDENCIA","4096":"NIE Comunitarios","4079":"NIE No Comunitarios","4047":"EXPEDICIÓN TARJETAS","20":"RECOGIDA TIE","4078":"SOLICITUD ASILO","4031":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA BADALONA","CNP - COMISARIA CASTELLDEFELS","CNP - COMISARIA CERDANYOLA DEL VALLES","CNP - COMISARIA CORNELLA DE LLOBREGAT","CNP - COMISARIA EL PRAT DE LLOBREGAT","CNP - COMISARIA GRANOLLERS","CNP - COMISARIA IGUALADA","CNP - COMISARIA L'HOSPITALET DE LLOBREGAT","CNP - COMISARIA MANRESA","CNP - COMISARIA MATARO","CNP - COMISARIA SABADELL","CNP - COMISARIA SANT BOI DE LLOBREGAT","CNP - COMISARIA SANT CUGAT DEL VALLES","CNP - COMISARIA SANTA COLOMA DE GRAMENET","CNP - COMISARIA TERRASSA","CNP - COMISARIA VIC","CNP - COMISARIA VILADECANS","CNP - COMISARIA VILAFRANCA DEL PENEDES","CNP - COMISARIA VILANOVA I LA GELTRU","CNP - RAMBLA GUIPUSCOA 74"]},
+  "28":{"name":"Madrid","tramites":{"4010":"ASIGNACIÓN DE NIE","20":"AUTORIZACIÓN DE REGRESO","4094":"BREXIT (Tarjeta Británicos)","4037":"CARTA DE INVITACIÓN","4038":"CERTIFICADO REGISTRO UE","4049":"CERTIFICADOS RESIDENCIA","4096":"NIE Comunitarios","4079":"NIE No Comunitarios","4047":"EXPEDICIÓN TARJETAS","4036":"RECOGIDA TIE","4078":"SOLICITUD ASILO","4031":"TOMA DE HUELLAS (TIE)"},"oficinas":["COMISARIA ALCALA DE HENARES","COMISARIA ALCOBENDAS","COMISARIA ALCORCON","COMISARIA ARGANZUELA","COMISARIA CARABANCHEL","COMISARIA COSLADA","COMISARIA FUENCARRAL","COMISARIA GETAFE","COMISARIA HORTALEZA","COMISARIA LATINA","COMISARIA LEGANES","COMISARIA MORATALAZ","COMISARIA MOSTOLES","COMISARIA PARLA","COMISARIA POZUELO DE ALARCON","COMISARIA RETIRO","COMISARIA TETUAN","COMISARIA TORREJON DE ARDOZ","COMISARIA USERA","COMISARIA VALLECAS","OFICINA DE ASILO"]},
+  "29":{"name":"Málaga","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4094":"BREXIT (Tarjeta Británicos)","4037":"CARTA DE INVITACIÓN","4031":"CERTIFICADO REGISTRO UE","20":"RECOGIDA TIE","4078":"SOLICITUD ASILO","4038":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA ANTEQUERA","CNP - COMISARIA COIN","CNP - COMISARIA ESTEPONA","CNP - COMISARIA FUENGIROLA","CNP - COMISARIA MALAGA CENTRO","CNP - COMISARIA MARBELLA","CNP - COMISARIA TORREMOLINOS","CNP - COMISARIA VELEZ-MALAGA"]},
+  "41":{"name":"Sevilla","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4037":"CARTA DE INVITACIÓN","4031":"CERTIFICADO REGISTRO UE","4038":"NIE Comunitarios","4049":"CERTIFICADOS RESIDENCIA","20":"RECOGIDA TIE","4078":"SOLICITUD ASILO","4096":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA ALCALA DE GUADAIRA","CNP - COMISARIA DOS HERMANAS","CNP - COMISARIA SEVILLA CENTRO","CNP - COMISARIA SEVILLA NORTE","CNP - COMISARIA SEVILLA SUR","CNP - COMISARIA UTRERA"]},
+  "46":{"name":"Valencia","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4094":"BREXIT (Tarjeta Británicos)","4037":"CARTA DE INVITACIÓN","4031":"CERTIFICADO REGISTRO UE","4038":"NIE Comunitarios","20":"RECOGIDA TIE","4078":"SOLICITUD ASILO","4096":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA ALZIRA","CNP - COMISARIA BURJASSOT","CNP - COMISARIA GANDIA","CNP - COMISARIA SAGUNTO","CNP - COMISARIA TORRENT","CNP - COMISARIA VALENCIA CENTRO","CNP - COMISARIA VALENCIA PATRAIX","CNP - COMISARIA VALENCIA PUERTO"]},
+  "11":{"name":"Cádiz","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4094":"BREXIT (Tarjeta Británicos)","4037":"CARTA DE INVITACIÓN","4031":"CERTIFICADO REGISTRO UE","20":"RECOGIDA TIE","4038":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA ALGECIRAS","CNP - COMISARIA CADIZ","CNP - COMISARIA EL PUERTO DE SANTA MARIA","CNP - COMISARIA JEREZ DE LA FRONTERA","CNP - COMISARIA LA LINEA DE LA CONCEPCION","CNP - COMISARIA SANLUCAR DE BARRAMEDA"]},
+  "18":{"name":"Granada","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4037":"CARTA DE INVITACIÓN","4031":"CERTIFICADO REGISTRO UE","20":"RECOGIDA TIE","4038":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA BAZA","CNP - COMISARIA GRANADA CENTRO","CNP - COMISARIA MOTRIL"]},
+  "30":{"name":"Murcia","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4031":"CERTIFICADO REGISTRO UE","4037":"CARTA DE INVITACIÓN","20":"RECOGIDA TIE","4078":"SOLICITUD ASILO","4038":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA CARTAGENA","CNP - COMISARIA LORCA","CNP - COMISARIA MOLINA DE SEGURA","CNP - COMISARIA MURCIA CENTRO","CNP - COMISARIA YECLA"]},
+  "4":{"name":"Almería","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4031":"CERTIFICADO REGISTRO UE","4037":"CARTA DE INVITACIÓN","20":"RECOGIDA TIE","4038":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA ALMERIA CENTRO","CNP - COMISARIA EL EJIDO","CNP - COMISARIA ROQUETAS DE MAR"]},
+  "7":{"name":"Illes Balears","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4094":"BREXIT (Tarjeta Británicos)","4037":"CARTA DE INVITACIÓN","4031":"CERTIFICADO REGISTRO UE","20":"RECOGIDA TIE","4038":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA IBIZA","CNP - COMISARIA INCA","CNP - COMISARIA MANACOR","CNP - COMISARIA MENORCA (MAHON)","CNP - COMISARIA PALMA CENTRO","CNP - COMISARIA PALMA SON CASTELLO"]},
+  "35":{"name":"Las Palmas","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4094":"BREXIT (Tarjeta Británicos)","4037":"CARTA DE INVITACIÓN","4031":"CERTIFICADO REGISTRO UE","20":"RECOGIDA TIE","4038":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA FUERTEVENTURA","CNP - COMISARIA LANZAROTE (ARRECIFE)","CNP - COMISARIA LAS PALMAS CENTRO","CNP - COMISARIA MASPALOMAS","CNP - COMISARIA TELDE"]},
+  "38":{"name":"S.C. Tenerife","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4094":"BREXIT (Tarjeta Británicos)","4037":"CARTA DE INVITACIÓN","4031":"CERTIFICADO REGISTRO UE","20":"RECOGIDA TIE","4038":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - GOMERA (SAN SEBASTIAN)","CNP - ICOD DE LOS VINOS","CNP - LA LAGUNA","CNP - PLAYA DE LAS AMERICAS","CNP - PUERTO DE LA CRUZ","OUE SANTA CRUZ DE TENERIFE"]},
+  "50":{"name":"Zaragoza","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4031":"CERTIFICADO REGISTRO UE","4037":"CARTA DE INVITACIÓN","20":"RECOGIDA TIE","4038":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA CALATAYUD","CNP - COMISARIA ZARAGOZA CENTRO","CNP - COMISARIA ZARAGOZA NORTE","CNP - COMISARIA ZARAGOZA SUR"]},
+  "36":{"name":"Pontevedra","tramites":{"4010":"ASIGNACIÓN DE NIE","4036":"AUTORIZACIÓN DE REGRESO","4031":"CERTIFICADO REGISTRO UE","4037":"CARTA DE INVITACIÓN","20":"RECOGIDA TIE","4038":"TOMA DE HUELLAS (TIE)"},"oficinas":["CNP - COMISARIA PONTEVEDRA","CNP - COMISARIA VILAGARCIA DE AROUSA","CNP - COMISARIA VIGO CENTRO","CNP - COMISARIA VIGO COIA"]}
+};
+
+const TRAMITE_COLORS = {"4010":"#4dabf7","4036":"#69db7c","4094":"#ffd43b","4031":"#a9e34b","4037":"#f783ac","4049":"#74c0fc","4096":"#da77f2","4079":"#ffa94d","4047":"#63e6be","20":"#748ffc","4078":"#ff8787","4038":"#51cf66"};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let selectedProvince = null, selectedTramite = null, selectedOffice = null;
+let dateFrom = null, dateTo = null;
+let calYear, calMonth;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.onload = () => {
+  buildProvinceGrid();
+  const now = new Date();
+  calYear = now.getFullYear(); calMonth = now.getMonth();
+  renderCalendar();
+
+  // ── Pre-fill from bot URL params ─────────────────────────────────────────
+  const params = new URLSearchParams(window.location.search);
+  const pid  = params.get('pid');
+  const tid  = params.get('tid');
+  const oidx = params.get('oidx');
+  const uid  = params.get('uid');
+
+  if (uid) {
+    const el = document.getElementById('telegram_id');
+    if (el) el.value = uid;
+  }
+
+  if (pid && PROVINCIAS[pid]) {
+    // Auto-select province
+    selectProvince(pid);
+
+    if (tid && PROVINCIAS[pid].tramites[tid]) {
+      // Auto-select tramite
+      selectedTramite = tid;
+
+      if (oidx !== null) {
+        // Auto-select office
+        selectedOffice = oidx === 'ANY' ? 'ANY' : parseInt(oidx);
+
+        // Skip to date step directly
+        setTimeout(() => {
+          goStep(4); // Jump to calendar/date step
+        }, 200);
+      } else {
+        setTimeout(() => { goStep(3); }, 200); // Jump to office step
+      }
+    } else {
+      setTimeout(() => { goStep(2); }, 200); // Jump to tramite step
+    }
+  }
+};
+
+// ── Province ──────────────────────────────────────────────────────────────────
+function buildProvinceGrid(filter='') {
+  const grid = document.getElementById('provGrid');
+  const sorted = Object.entries(PROVINCIAS).sort((a,b)=>a[1].name.localeCompare(b[1].name,'es'));
+  grid.innerHTML = '';
+  sorted.filter(([,p])=>p.name.toLowerCase().includes(filter.toLowerCase())).forEach(([id,p])=>{
+    const btn = document.createElement('button');
+    btn.className = 'prov-btn' + (selectedProvince===id?' selected':'');
+    btn.textContent = p.name;
+    btn.onclick = ()=>selectProvince(id);
+    grid.appendChild(btn);
+  });
+}
+function filterProvinces() { buildProvinceGrid(document.getElementById('provSearch').value); }
+function selectProvince(id) {
+  selectedProvince=id; selectedTramite=null; selectedOffice=null;
+  buildProvinceGrid(document.getElementById('provSearch').value);
+  document.getElementById('btnStep1').disabled = false;
+}
+
+// ── Tramite ───────────────────────────────────────────────────────────────────
+function buildTramiteList() {
+  const list = document.getElementById('tramiteList');
+  list.innerHTML = '';
+  const tramites = PROVINCIAS[selectedProvince].tramites;
+  Object.entries(tramites).forEach(([id,name])=>{
+    const btn = document.createElement('button');
+    btn.className = 'tramite-btn' + (selectedTramite===id?' selected':'');
+    btn.innerHTML = `<span class="tramite-dot" style="background:${TRAMITE_COLORS[id]||'#aaa'}"></span>${name}`;
+    btn.onclick = ()=>{ selectedTramite=id; buildTramiteList(); document.getElementById('btnStep2').disabled=false; };
+    list.appendChild(btn);
+  });
+}
+
+// ── Office ────────────────────────────────────────────────────────────────────
+function buildOfficeList() {
+  const list = document.getElementById('officeList');
+  list.innerHTML = '';
+  PROVINCIAS[selectedProvince].oficinas.forEach((name,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'office-btn' + (selectedOffice===i?' selected':'');
+    btn.innerHTML = `<span class="office-icon">🏢</span>${name}`;
+    btn.onclick = ()=>{ selectedOffice=i; buildOfficeList(); document.getElementById('btnStep3').disabled=false; };
+    list.appendChild(btn);
+  });
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS   = ['L','M','X','J','V','S','D'];
+
+function renderCalendar() {
+  document.getElementById('calTitle').textContent = `${MONTHS[calMonth]} ${calYear}`;
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  DAYS.forEach(d=>{ const el=document.createElement('div'); el.className='cal-day-name'; el.textContent=d; grid.appendChild(el); });
+
+  const first = new Date(calYear, calMonth, 1);
+  let startDay = first.getDay(); // 0=Sun
+  startDay = startDay === 0 ? 6 : startDay - 1; // Mon=0
+
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  for(let i=0;i<startDay;i++){
+    const el=document.createElement('div'); el.className='cal-day empty'; grid.appendChild(el);
+  }
+  for(let d=1;d<=daysInMonth;d++){
+    const date = new Date(calYear,calMonth,d);
+    const el = document.createElement('div');
+    el.textContent = d;
+    let cls = 'cal-day';
+    if(date < today) cls += ' past';
+    else {
+      const ds = dateStr(date);
+      if(dateFrom && ds===dateFrom && dateTo && ds===dateTo) cls += ' start end';
+      else if(dateFrom && ds===dateFrom) cls += ' start';
+      else if(dateTo && ds===dateTo) cls += ' end';
+      else if(dateFrom && dateTo && ds>dateFrom && ds<dateTo) cls += ' in-range';
+      if(dateStr(date)===dateStr(today)) cls += ' today';
+      el.onclick = ()=>pickDate(ds);
+    }
+    el.className = cls;
+    grid.appendChild(el);
+  }
+}
+
+function dateStr(d) { return d.toISOString().split('T')[0]; }
+function fmtDate(s) { if(!s)return'—'; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
+
+function pickDate(ds) {
+  if(!dateFrom || (dateFrom && dateTo)) { dateFrom=ds; dateTo=null; }
+  else if(ds < dateFrom) { dateTo=dateFrom; dateFrom=ds; }
+  else { dateTo=ds; }
+  document.getElementById('displayFrom').textContent = fmtDate(dateFrom);
+  document.getElementById('displayTo').textContent   = fmtDate(dateTo);
+  document.getElementById('btnStep4').disabled = !(dateFrom && dateTo);
+  renderCalendar();
+}
+function prevMonth() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
+function nextMonth() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
+
+// ── Step Navigation ───────────────────────────────────────────────────────────
+function goStep(n) {
+  if(n===2){ buildTramiteList(); }
+  if(n===3){ buildOfficeList(); }
+  if(n===6){ if(!validateForm()) return; buildSummary(); }
+
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('step'+n).classList.add('active');
+
+  document.querySelectorAll('.step-dot').forEach((d,i)=>{
+    d.classList.remove('active','done');
+    if(i+1===n) d.classList.add('active');
+    else if(i+1<n) d.classList.add('done');
+  });
+  window.scrollTo(0,0);
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+function validateForm() {
+  let ok = true;
+  const required = ['nombre','apellido','nie','fecha_nac','email','telefono','telegram_id'];
+  required.forEach(id => {
+    const el = document.getElementById(id);
+    const err = document.getElementById('err_'+id);
+    if(!el.value.trim()) {
+      el.classList.add('error');
+      if(err) err.classList.add('show');
+      ok = false;
+    } else {
+      el.classList.remove('error');
+      if(err) err.classList.remove('show');
+    }
+  });
+  const email = document.getElementById('email').value;
+  if(email && !/^[\w.-]+@[\w.-]+\.\w+$/.test(email)) {
+    document.getElementById('email').classList.add('error');
+    document.getElementById('err_email').classList.add('show');
+    ok = false;
+  }
+  return ok;
+}
+
+// ── Summary ───────────────────────────────────────────────────────────────────
+function buildSummary() {
+  const p = PROVINCIAS[selectedProvince];
+  const rows = [
+    ['🗺️','Provincia', p.name],
+    ['📋','Trámite', p.tramites[selectedTramite]],
+    ['🏢','Oficina', p.oficinas[selectedOffice]],
+    ['📅','Buscar desde', fmtDate(dateFrom)],
+    ['📅','Buscar hasta', fmtDate(dateTo)],
+    ['👤','Nombre', document.getElementById('nombre').value+' '+document.getElementById('apellido').value],
+    ['🪪','NIE/Pasaporte', document.getElementById('nie').value.toUpperCase()],
+    ['🎂','Fecha Nac.', document.getElementById('fecha_nac').value],
+    ['🌍','Nacionalidad', document.getElementById('nacionalidad').value],
+    ['📧','Email', document.getElementById('email').value],
+    ['📞','Teléfono', document.getElementById('telefono').value],
+  ];
+  document.getElementById('summaryCard').innerHTML = rows.map(([icon,label,val])=>`
+    <div class="summary-row">
+      <span class="summary-icon">${icon}</span>
+      <div><div class="summary-label">${label}</div><div class="summary-val">${val}</div></div>
+    </div>`).join('');
+}
+
+// ── Submit ────────────────────────────────────────────────────────────────────
+async function submitBooking() {
+  // Validate required fields
+  const requiredIds = ['nombre','apellido','nie','fecha_nac','email','telefono','telegram_id'];
+  let valid = true;
+  requiredIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || !el.value.trim()) {
+      if (el) el.style.border = '2px solid #e05c5c';
+      valid = false;
+    } else {
+      if (el) el.style.border = '';
+    }
+  });
+  if (!valid) { alert('⚠️ Por favor rellena todos los campos obligatorios.'); return; }
+  if (!dateFrom || !dateTo) { alert('⚠️ Selecciona el rango de fechas en el calendario.'); return; }
+
+  // Get URL params (pre-filled from bot)
+  const params    = new URLSearchParams(window.location.search);
+  const urlPid    = params.get('pid');
+  const urlTid    = params.get('tid');
+  const urlOidx   = params.get('oidx');
+
+  const finalPid  = selectedProvince || urlPid;
+  const finalTid  = selectedTramite  || urlTid;
+  const finalOidx = (selectedOffice !== null && selectedOffice !== undefined)
+                      ? selectedOffice
+                      : (urlOidx || 'ANY');
+
+  const payload = {
+    province_id:   finalPid,
+    tramite_id:    finalTid,
+    oficina_idx:   finalOidx,
+    date_from:     dateFrom,
+    date_to:       dateTo,
+    nombre:        document.getElementById('nombre').value.trim(),
+    apellido:      document.getElementById('apellido').value.trim(),
+    nie:           document.getElementById('nie').value.trim().toUpperCase(),
+    fecha_nac:     document.getElementById('fecha_nac').value,
+    nacionalidad:  document.getElementById('nacionalidad').value.trim(),
+    email:         document.getElementById('email').value.trim(),
+    telefono:      document.getElementById('telefono').value.trim(),
+    telegram_id:   document.getElementById('telegram_id').value.trim(),
+  };
+
+  // Show loading
+  const submitBtn = document.querySelector('.btn-success');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Enviando...'; }
+
+  try {
+    const res = await fetch('/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('bookingIdDisplay').textContent = data.booking_id;
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById('stepSuccess').classList.add('active');
+      document.querySelectorAll('.step-dot').forEach(d => d.classList.add('done'));
+    } else {
+      alert('❌ Error: ' + (data.error || 'Intenta de nuevo'));
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🚀 Iniciar Búsqueda Automática'; }
+    }
+  } catch(e) {
+    alert('❌ Error de conexión. Verifica tu conexión e intenta de nuevo.');
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🚀 Iniciar Búsqueda Automática'; }
+  }
+}
+</script>
+</body>
+</html>
