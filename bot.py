@@ -536,26 +536,135 @@ async def otp_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 # ─── /miscitas ────────────────────────────────────────────────────────────────
 
+def _miscitas_keyboard(uid, tab="search"):
+    """Build miscitas keyboard with In Search / Found tabs"""
+    bookings = db.get_user_bookings(uid)
+    searching = [b for b in bookings if b["status"] in ("queued", "retrying")]
+    found     = [b for b in bookings if b["status"] == "completed"]
+
+    rows = []
+    # Tab buttons
+    rows.append([
+        InlineKeyboardButton(
+            f"{'▶️ ' if tab=='search' else ''}✅ En búsqueda ({len(searching)})",
+            callback_data="MYCITAS|search"),
+        InlineKeyboardButton(
+            f"{'▶️ ' if tab=='found' else ''}✅ Encontradas ({len(found)})",
+            callback_data="MYCITAS|found"),
+    ])
+
+    # List items
+    items = searching if tab == "search" else found
+    for i, b in enumerate(items[:8], 1):
+        data = b.get("data", {})
+        nie   = data.get("nie", "")
+        name  = data.get("nombre", "")[:18]
+        label = f"{i}. {nie} - {name}" if nie else f"{i}. {b['id']}"
+        rows.append([InlineKeyboardButton(label, callback_data=f"MYCITAS_VIEW|{b['id']}|{tab}")])
+
+    rows.append([InlineKeyboardButton("❌ Cerrar", callback_data="MYCITAS_CLOSE")])
+    return InlineKeyboardMarkup(rows)
+
+
 async def mis_citas(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     if uid not in ADMIN_IDS and db.get_user_status(uid) != "approved":
         return
+    await update.message.reply_text(
+        "📋 *Mis Búsquedas*",
+        parse_mode="Markdown",
+        reply_markup=_miscitas_keyboard(uid, "search"))
+
+
+async def cb_mycitas_tab(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer()
+    uid = q.from_user.id
+    tab = q.data.split("|")[1]
+    try:
+        await q.edit_message_reply_markup(_miscitas_keyboard(uid, tab))
+    except Exception:
+        pass
+
+
+async def cb_mycitas_view(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer()
+    uid  = q.from_user.id
+    parts = q.data.split("|")
+    bid  = parts[1]
+    tab  = parts[2] if len(parts) > 2 else "search"
+
     bookings = db.get_user_bookings(uid)
-    if not bookings:
-        await update.message.reply_text("No tienes reservas. Usa /cita para empezar.")
+    b = next((x for x in bookings if x["id"] == bid), None)
+    if not b:
+        await q.answer("No encontrado", show_alert=True)
         return
+
+    data = b.get("data", {})
     status_map = {
-        "queued":    "⏳ Buscando",
+        "queued":    "🔍 Buscando cita",
         "retrying":  "🔄 Reintentando",
-        "completed": "✅ Completada",
+        "completed": "✅ Cita encontrada",
         "failed":    "❌ Fallida",
-        "error":     "⚠️ Error"
+        "cancelled": "🚫 Cancelada",
     }
-    lines = ["📋 *Tus últimas reservas:*\n"]
-    for b in bookings:
-        st = status_map.get(b["status"], b["status"])
-        lines.append(f"{st} — `{b['id']}` — {b['created_at'][:10]}")
-    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    st = status_map.get(b["status"], b["status"])
+
+    from data import PROVINCIA_DATA
+    pdata = PROVINCIA_DATA.get(data.get("province_id", ""), {})
+    tname = pdata.get("tramites", {}).get(data.get("tramite_id", ""), "—")
+    tname = tname.replace("POLICIA - ", "")
+
+    text = (
+        f"🔍 *Situación:* {st}\n\n"
+        f"🗺️ *Provincia:* {pdata.get('name', '—')}\n"
+        f"📋 *Trámite:* {tname}\n"
+        f"🪪 *Documento:* `{data.get('nie', '—')}`\n"
+        f"👤 *Nombre:* {data.get('nombre', '—')}\n"
+        f"🎂 *Año nac.:* {data.get('fecha_nac', '—')}\n"
+        f"🌍 *Nacionalidad:* {data.get('nacionalidad', '—')}\n"
+        f"📞 *Teléfono:* {data.get('telefono', '—')}\n"
+        f"📅 *Fecha mín:* {b.get('date_from', '—')}\n"
+        f"📅 *Fecha máx:* {b.get('date_to', '—')}\n"
+    )
+
+    kb_rows = []
+    if b["status"] in ("queued", "retrying"):
+        kb_rows.append([InlineKeyboardButton("🚫 Cancelar búsqueda", callback_data=f"MYCITAS_CANCEL|{bid}|{tab}")])
+    kb_rows.append([InlineKeyboardButton("◀️ Volver", callback_data=f"MYCITAS|{tab}")])
+
+    try:
+        await q.edit_message_text(text, parse_mode="Markdown",
+                                  reply_markup=InlineKeyboardMarkup(kb_rows))
+    except Exception:
+        pass
+
+
+async def cb_mycitas_cancel_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer()
+    uid   = q.from_user.id
+    parts = q.data.split("|")
+    bid   = parts[1]
+    tab   = parts[2] if len(parts) > 2 else "search"
+
+    ok = db.cancel_booking(bid, uid)
+    if ok:
+        await q.edit_message_text(
+            f"🚫 *Búsqueda cancelada*\n\nID: `{bid}`\n\nUsa /cita para iniciar una nueva búsqueda.",
+            parse_mode="Markdown")
+    else:
+        await q.answer("No se pudo cancelar (ya completada o no encontrada)", show_alert=True)
+        try:
+            await q.edit_message_reply_markup(_miscitas_keyboard(uid, tab))
+        except Exception:
+            pass
+
+
+async def cb_mycitas_close(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer()
+    try:
+        await q.delete_message()
+    except Exception:
+        pass
 
 
 # ─── /pending /users ──────────────────────────────────────────────────────────
@@ -785,6 +894,10 @@ def main():
     tg_app.add_handler(CommandHandler("users",       list_users))
     tg_app.add_handler(CommandHandler("addcredits",  add_credits))
     tg_app.add_handler(CommandHandler("miscitas",    mis_citas))
+    tg_app.add_handler(CallbackQueryHandler(cb_mycitas_tab,            pattern=r"^MYCITAS\|"))
+    tg_app.add_handler(CallbackQueryHandler(cb_mycitas_view,           pattern=r"^MYCITAS_VIEW\|"))
+    tg_app.add_handler(CallbackQueryHandler(cb_mycitas_cancel_confirm, pattern=r"^MYCITAS_CANCEL\|"))
+    tg_app.add_handler(CallbackQueryHandler(cb_mycitas_close,          pattern=r"^MYCITAS_CLOSE$"))
     tg_app.add_handler(MessageHandler(filters.Regex(r"^\d{4,8}$"), otp_handler))
 
     async def post_init(app):

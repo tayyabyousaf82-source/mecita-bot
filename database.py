@@ -115,6 +115,19 @@ class Database:
                 "UPDATE bookings SET status=?,result=?,pdf_path=?,updated_at=datetime('now') WHERE id=?",
                 (status, result, pdf_path, bid))
 
+    def cancel_booking(self, bid, user_id):
+        """Cancel a booking - only if it belongs to the user and is still searching"""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM bookings WHERE id=? AND user_id=? AND status IN ('queued','retrying')",
+                (bid, user_id)).fetchone()
+            if row:
+                conn.execute(
+                    "UPDATE bookings SET status='cancelled',updated_at=datetime('now') WHERE id=?",
+                    (bid,))
+                return True
+            return False
+
     def increment_attempts(self, bid):
         with self._conn() as conn:
             conn.execute(
