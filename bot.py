@@ -32,26 +32,17 @@ logger = logging.getLogger(__name__)
 # ─── Keyboards ────────────────────────────────────────────────────────────────
 
 def province_keyboard(page=0):
+    # No pagination — show all 52 provinces at once (scroll to see all)
     provs = sorted(PROVINCIA_DATA.items(), key=lambda x: x[1]["name"])
-    per = 30
-    chunk = provs[page*per:(page+1)*per]
     rows = []
     row = []
-    for pid, pd in chunk:
+    for pid, pd in provs:
         row.append(InlineKeyboardButton(pd["name"], callback_data=f"PROV|{pid}"))
         if len(row) == 3:
             rows.append(row)
             row = []
     if row:
         rows.append(row)
-    nav = []
-    if page > 0:
-        nav.append(InlineKeyboardButton("◀️", callback_data=f"PROVPAGE|{page-1}"))
-    total = (len(provs) + per - 1) // per
-    nav.append(InlineKeyboardButton(f"{page+1}/{total}", callback_data="NOOP"))
-    if (page+1)*per < len(provs):
-        nav.append(InlineKeyboardButton("▶️", callback_data=f"PROVPAGE|{page+1}"))
-    rows.append(nav)
     rows.append([InlineKeyboardButton("❌ Cancelar", callback_data="CANCEL")])
     return InlineKeyboardMarkup(rows)
 
