@@ -5,326 +5,132 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>MiCitaBot — Reservar Cita</title>
 <style>
-  :root {
-    --bg: #0f1923;
-    --card: #1a2535;
-    --card2: #212f42;
-    --accent: #4e9de0;
-    --accent2: #3bc67e;
-    --danger: #e05c5c;
-    --text: #dde6f0;
-    --muted: #7a94b0;
-    --border: #2a3d55;
-    --radius: 14px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    min-height: 100vh;
-    padding: 0 0 60px;
-  }
+:root{--bg:#f0f2f5;--card:#fff;--accent:#1877f2;--accent2:#42b883;--danger:#e53935;--text:#1c1e21;--muted:#65676b;--border:#ddd;--radius:12px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;padding-bottom:60px;}
+.header{background:var(--accent);padding:16px 20px;text-align:center;color:#fff;}
+.header h1{font-size:20px;font-weight:700;}
+.header p{font-size:13px;opacity:.85;margin-top:3px;}
 
-  /* Header */
-  .header {
-    background: linear-gradient(135deg, #1a2d47, #0f1f35);
-    padding: 24px 20px 20px;
-    text-align: center;
-    border-bottom: 1px solid var(--border);
-  }
-  .header h1 { font-size: 22px; color: #fff; }
-  .header p  { color: var(--muted); font-size: 13px; margin-top: 4px; }
+/* Progress */
+.progress-wrap{display:flex;justify-content:center;gap:4px;padding:14px 16px 0;background:#fff;border-bottom:1px solid var(--border);}
+.step-dot{width:28px;height:4px;border-radius:4px;background:var(--border);transition:background .3s;}
+.step-dot.active{background:var(--accent);}
+.step-dot.done{background:var(--accent2);}
 
-  /* Progress */
-  .progress-wrap {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    padding: 18px 20px 0;
-  }
-  .step-dot {
-    width: 32px; height: 4px;
-    border-radius: 4px;
-    background: var(--border);
-    transition: background .3s;
-  }
-  .step-dot.active  { background: var(--accent); }
-  .step-dot.done    { background: var(--accent2); }
+/* Sections */
+.section{display:none;padding:16px;animation:fadeIn .2s ease;}
+.section.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.section-title{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:12px;}
 
-  /* Sections */
-  .section {
-    display: none;
-    padding: 20px 16px 0;
-    animation: fadeIn .25s ease;
-  }
-  .section.active { display: block; }
-  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+/* Office list - scrollable */
+.office-scroll{max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:#fafafa;}
+.office-item{padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;}
+.office-item:last-child{border-bottom:none;}
+.office-item:hover,.office-item.selected{background:#e8f0fe;}
+.office-item.selected{color:var(--accent);font-weight:600;}
+.office-chk{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.office-item.selected .office-chk{border-color:var(--accent);background:var(--accent);}
+.office-chk::after{content:'';display:none;width:8px;height:8px;border-radius:50%;background:#fff;}
+.office-item.selected .office-chk::after{display:block;}
 
-  .section-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--accent);
-    margin-bottom: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+/* Form */
+.form-group{margin-bottom:14px;}
+.form-label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600;}
+.form-input,.form-select{width:100%;background:#fff;border:1px solid var(--border);border-radius:8px;padding:11px 12px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s;}
+.form-input:focus,.form-select:focus{border-color:var(--accent);}
+.form-input.error,.form-select.error{border-color:var(--danger);}
+.error-msg{color:var(--danger);font-size:11px;margin-top:3px;display:none;}
+.error-msg.show{display:block;}
 
-  /* Province Grid */
-  .search-box {
-    width: 100%;
-    background: var(--card2);
-    border: 1px solid var(--border);
-    border-radius: 22px;
-    padding: 10px 16px;
-    color: var(--text);
-    font-size: 14px;
-    outline: none;
-    margin-bottom: 12px;
-  }
-  .prov-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    max-height: 340px;
-    overflow-y: auto;
-    padding-right: 4px;
-  }
-  .prov-btn {
-    background: var(--card2);
-    border: 2px solid transparent;
-    border-radius: 10px;
-    padding: 10px 4px;
-    color: var(--text);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    text-align: center;
-    transition: all .15s;
-  }
-  .prov-btn:hover  { border-color: var(--accent); }
-  .prov-btn.selected { border-color: var(--accent); background: #1e3550; color: #fff; }
+/* Doc type buttons */
+.doc-type-row{display:flex;gap:8px;margin-bottom:14px;}
+.doc-btn{flex:1;padding:10px 4px;border:2px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;}
+.doc-btn.selected{border-color:var(--accent);color:var(--accent);background:#e8f0fe;}
 
-  /* Tramite List */
-  .tramite-list { display: flex; flex-direction: column; gap: 8px; }
-  .tramite-btn {
-    background: var(--card2);
-    border: 2px solid transparent;
-    border-radius: 12px;
-    padding: 13px 14px;
-    color: var(--text);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    text-align: left;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transition: all .15s;
-  }
-  .tramite-btn:hover    { border-color: var(--accent); }
-  .tramite-btn.selected { border-color: var(--accent); background: #1e3550; }
-  .tramite-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
+/* Date inputs */
+.date-input-wrap{position:relative;}
+.date-input-wrap .cal-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;}
+.date-input-wrap .form-input{padding-left:38px;cursor:pointer;}
 
-  /* Office List */
-  .office-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
-  .office-btn {
-    background: var(--card2);
-    border: 2px solid transparent;
-    border-radius: 12px;
-    padding: 12px 14px;
-    color: var(--text);
-    font-size: 12px;
-    cursor: pointer;
-    text-align: left;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    transition: all .15s;
-  }
-  .office-btn:hover    { border-color: var(--accent2); }
-  .office-btn.selected { border-color: var(--accent2); background: #1a3528; }
-  .office-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+/* Calendar popup */
+.cal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-end;}
+.cal-overlay.open{display:flex;}
+.cal-popup{background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:420px;margin:0 auto;}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.cal-title{font-weight:700;font-size:15px;}
+.cal-nav-btn{background:#f0f2f5;border:none;border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-day-name{text-align:center;font-size:11px;color:var(--muted);padding:4px 0;font-weight:600;}
+.cal-day{text-align:center;padding:8px 2px;border-radius:8px;font-size:13px;cursor:pointer;transition:all .15s;}
+.cal-day:hover:not(.empty):not(.past){background:#f0f2f5;}
+.cal-day.empty,.cal-day.past{color:#ccc;cursor:default;}
+.cal-day.selected{background:var(--accent);color:#fff;}
+.cal-day.today{font-weight:700;color:var(--accent);}
+.cal-done-btn{width:100%;margin-top:14px;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;}
 
-  /* Form Fields */
-  .form-group { margin-bottom: 14px; }
-  .form-label {
-    display: block;
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 6px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .form-input, .form-select {
-    width: 100%;
-    background: var(--card2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 14px;
-    color: var(--text);
-    font-size: 14px;
-    outline: none;
-    transition: border-color .2s;
-    appearance: none;
-  }
-  .form-input:focus, .form-select:focus { border-color: var(--accent); }
-  .form-input.error { border-color: var(--danger); }
-  .error-msg { color: var(--danger); font-size: 11px; margin-top: 4px; display: none; }
-  .error-msg.show { display: block; }
+/* Nationality popup */
+.nat-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end;}
+.nat-overlay.open{display:flex;}
+.nat-popup{background:#1c2636;border-radius:16px 16px 0 0;width:100%;max-width:420px;margin:0 auto;max-height:80vh;display:flex;flex-direction:column;}
+.nat-search{padding:14px 16px 10px;}
+.nat-search input{width:100%;background:#2a3a50;border:none;border-radius:8px;padding:10px 14px;color:#fff;font-size:14px;outline:none;}
+.nat-search input::placeholder{color:#7a8fa6;}
+.nat-list{overflow-y:auto;flex:1;}
+.nat-item{padding:14px 20px;border-bottom:1px solid #2a3a50;cursor:pointer;color:#dde6f0;font-size:14px;display:flex;justify-content:space-between;align-items:center;}
+.nat-item:hover{background:#2a3a50;}
+.nat-item.selected{color:var(--accent);}
+.nat-item .nat-radio{width:20px;height:20px;border-radius:50%;border:2px solid #4e6a8a;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.nat-item.selected .nat-radio{border-color:var(--accent);background:var(--accent);}
+.nat-item .nat-radio::after{content:'';display:none;width:8px;height:8px;border-radius:50%;background:#fff;}
+.nat-item.selected .nat-radio::after{display:block;}
 
-  /* Calendar Date Range */
-  .calendar-wrap {
-    background: var(--card2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 14px;
-  }
-  .cal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-  .cal-title { font-weight: 700; font-size: 15px; }
-  .cal-nav {
-    background: var(--card);
-    border: none;
-    color: var(--accent);
-    font-size: 18px;
-    cursor: pointer;
-    border-radius: 8px;
-    width: 32px; height: 32px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 3px;
-  }
-  .cal-day-name {
-    text-align: center;
-    font-size: 10px;
-    color: var(--muted);
-    padding: 4px 0;
-    font-weight: 600;
-  }
-  .cal-day {
-    text-align: center;
-    padding: 7px 2px;
-    border-radius: 8px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all .15s;
-    border: 1px solid transparent;
-  }
-  .cal-day:hover:not(.empty):not(.past) { background: var(--card); border-color: var(--accent); }
-  .cal-day.empty  { cursor: default; }
-  .cal-day.past   { color: var(--border); cursor: default; }
-  .cal-day.start  { background: var(--accent); color: #fff; border-radius: 8px 0 0 8px; }
-  .cal-day.end    { background: var(--accent); color: #fff; border-radius: 0 8px 8px 0; }
-  .cal-day.in-range { background: #1e3550; color: var(--text); border-radius: 0; }
-  .cal-day.start.end { border-radius: 8px; }
-  .cal-day.today  { border-color: var(--accent2); color: var(--accent2); font-weight: 700; }
+/* Certificate upload */
+.cert-upload-area{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;}
+.cert-upload-area:hover{border-color:var(--accent);}
+.cert-upload-area p{color:var(--muted);font-size:13px;margin-top:6px;}
+.cert-file-info{background:#f0f2f5;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:12px;color:var(--text);display:none;}
 
-  .date-range-display {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-  }
-  .date-chip {
-    flex: 1;
-    background: var(--card);
-    border-radius: 8px;
-    padding: 8px 10px;
-    font-size: 12px;
-    color: var(--muted);
-    text-align: center;
-  }
-  .date-chip span { display: block; color: var(--text); font-weight: 600; font-size: 13px; margin-top: 2px; }
+/* Summary */
+.summary-card{background:#f8f9fa;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;}
+.summary-row{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.summary-row:last-child{border-bottom:none;}
+.summary-icon{font-size:15px;flex-shrink:0;}
+.summary-label{color:var(--muted);font-size:11px;}
+.summary-val{font-weight:600;word-break:break-all;}
 
-  /* Summary Card */
-  .summary-card {
-    background: var(--card2);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 14px;
-  }
-  .summary-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-  }
-  .summary-row:last-child { border-bottom: none; }
-  .summary-icon { font-size: 16px; flex-shrink: 0; }
-  .summary-label { color: var(--muted); font-size: 11px; }
-  .summary-val   { font-weight: 600; }
+/* Buttons */
+.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;margin-top:8px;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#1565c0;}
+.btn-success{background:var(--accent2);color:#fff;}
+.btn-back{background:#f0f2f5;color:var(--muted);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
 
-  /* Buttons */
-  .btn {
-    width: 100%;
-    padding: 14px;
-    border: none;
-    border-radius: 12px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all .15s;
-    margin-top: 8px;
-  }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: #3d8fd4; }
-  .btn-success { background: var(--accent2); color: #fff; }
-  .btn-back {
-    background: var(--card2);
-    color: var(--muted);
-    margin-top: 10px;
-  }
-  .btn:disabled { opacity: .5; cursor: not-allowed; }
+/* Success */
+.success-screen{text-align:center;padding:40px 20px;}
+.success-icon{font-size:64px;margin-bottom:16px;}
+.success-title{font-size:22px;font-weight:700;color:var(--accent2);}
 
-  /* Success Screen */
-  .success-screen {
-    text-align: center;
-    padding: 40px 20px;
-  }
-  .success-icon { font-size: 64px; margin-bottom: 16px; }
-  .success-title { font-size: 22px; font-weight: 700; color: var(--accent2); }
-  .success-sub { color: var(--muted); margin-top: 8px; font-size: 14px; }
-  .booking-id {
-    background: var(--card2);
-    border-radius: 10px;
-    padding: 12px;
-    margin: 16px 0;
-    font-family: monospace;
-    font-size: 18px;
-    letter-spacing: 2px;
-    color: var(--accent);
-  }
+/* Tramite */
+.tramite-list{display:flex;flex-direction:column;gap:8px;}
+.tramite-btn{background:#fff;border:2px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;transition:all .15s;}
+.tramite-btn:hover,.tramite-btn.selected{border-color:var(--accent);background:#e8f0fe;}
+.tramite-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+/* Province */
+.search-box{width:100%;background:#fff;border:1px solid var(--border);border-radius:22px;padding:10px 16px;color:var(--text);font-size:14px;outline:none;margin-bottom:12px;}
+.prov-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:340px;overflow-y:auto;}
+.prov-btn{background:#fff;border:2px solid var(--border);border-radius:10px;padding:10px 4px;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;}
+.prov-btn:hover,.prov-btn.selected{border-color:var(--accent);background:#e8f0fe;color:var(--accent);}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
 </style>
 </head>
 <body>
-
-<div class="header">
-  <h1>🤖 MiCitaBot</h1>
-  <p>Reserva tu cita de Extranjería automáticamente</p>
-</div>
-
-<!-- Progress Dots -->
+<div class="header"><h1>🤖 MiCitaBot</h1><p>Reserva automática de cita de Extranjería</p></div>
 <div class="progress-wrap">
   <div class="step-dot active" id="dot1"></div>
   <div class="step-dot" id="dot2"></div>
@@ -337,7 +143,7 @@
 <!-- STEP 1: Province -->
 <div class="section active" id="step1">
   <div class="section-title">🗺️ Selecciona la Provincia</div>
-  <input class="search-box" type="text" placeholder="🔍  Buscar provincia..." id="provSearch" oninput="filterProvinces()"/>
+  <input class="search-box" type="text" placeholder="🔍 Buscar provincia..." id="provSearch" oninput="filterProvinces()"/>
   <div class="prov-grid" id="provGrid"></div>
   <button class="btn btn-primary" id="btnStep1" onclick="goStep(2)" disabled>Siguiente →</button>
 </div>
@@ -352,30 +158,31 @@
 
 <!-- STEP 3: Office -->
 <div class="section" id="step3">
-  <div class="section-title">🏢 Selecciona la Oficina</div>
-  <div class="office-list" id="officeList"></div>
+  <div class="section-title">🏢 Selecciona la(s) Oficina(s)</div>
+  <div class="office-scroll" id="officeList"></div>
   <button class="btn btn-back" onclick="goStep(2)">← Volver</button>
   <button class="btn btn-primary" id="btnStep3" onclick="goStep(4)" disabled>Siguiente →</button>
 </div>
 
-<!-- STEP 4: Date Range -->
+<!-- STEP 4: Dates -->
 <div class="section" id="step4">
-  <div class="section-title">📅 Rango de Fechas para Buscar</div>
-  <div class="calendar-wrap">
-    <div class="cal-header">
-      <button class="cal-nav" onclick="prevMonth()">‹</button>
-      <span class="cal-title" id="calTitle"></span>
-      <button class="cal-nav" onclick="nextMonth()">›</button>
-    </div>
-    <div class="cal-grid" id="calGrid"></div>
-    <div class="date-range-display">
-      <div class="date-chip">Desde<span id="displayFrom">—</span></div>
-      <div class="date-chip">Hasta<span id="displayTo">—</span></div>
+  <div class="section-title">📅 Fechas de Búsqueda</div>
+  <div class="form-group">
+    <label class="form-label">Fecha mínima de la cita *</label>
+    <div class="date-input-wrap">
+      <span class="cal-icon">📅</span>
+      <input class="form-input" id="dateFromDisplay" readonly placeholder="Seleccionar fecha" onclick="openCal('from')"/>
+      <input type="hidden" id="date_from"/>
     </div>
   </div>
-  <p style="color:var(--muted);font-size:12px;text-align:center;margin-bottom:8px;">
-    ℹ️ El bot buscará citas dentro de este rango 24/7
-  </p>
+  <div class="form-group">
+    <label class="form-label">Fecha máxima de la cita *</label>
+    <div class="date-input-wrap">
+      <span class="cal-icon">📅</span>
+      <input class="form-input" id="dateToDisplay" readonly placeholder="Seleccionar fecha" onclick="openCal('to')"/>
+      <input type="hidden" id="date_to"/>
+    </div>
+  </div>
   <button class="btn btn-back" onclick="goStep(3)">← Volver</button>
   <button class="btn btn-primary" id="btnStep4" onclick="goStep(5)" disabled>Siguiente →</button>
 </div>
@@ -385,1089 +192,328 @@
   <div class="section-title">👤 Datos Personales</div>
 
   <div class="form-group">
-    <label class="form-label">Nombre Completo *</label>
-    <input class="form-input" id="nombre" type="text" placeholder="Ej: Sara Isabel Betancur Soto"/>
-    <div class="error-msg" id="err_nombre">Campo obligatorio</div>
-    <input type="hidden" id="apellido" value=""/>
+    <label class="form-label">Tipo de documento *</label>
+    <div class="doc-type-row">
+      <button class="doc-btn selected" id="docNIE" onclick="selectDoc('NIE')">N.I.E.</button>
+      <button class="doc-btn" id="docPAS" onclick="selectDoc('PASAPORTE')">PASAPORTE</button>
+      <button class="doc-btn" id="docDNI" onclick="selectDoc('DNI')">D.N.I.</button>
+    </div>
+    <input type="hidden" id="doc_type" value="NIE"/>
   </div>
+
   <div class="form-group">
-    <label class="form-label">NIE / Pasaporte *</label>
+    <label class="form-label">Número de documento *</label>
     <input class="form-input" id="nie" type="text" placeholder="Ej: X1234567A"/>
-    <div class="error-msg" id="err_nie">Formato inválido</div>
+    <div class="error-msg" id="err_nie">Introduce un documento válido</div>
   </div>
+
   <div class="form-group">
-    <label class="form-label">Año de Nacimiento *</label>
-    <select class="form-select" id="dob_year" onchange="updateFechaNac()">
-      <option value="">Selecciona año</option>
-      <option value="2010">2010</option><option value="2009">2009</option><option value="2008">2008</option><option value="2007">2007</option><option value="2006">2006</option><option value="2005">2005</option><option value="2004">2004</option><option value="2003">2003</option><option value="2002">2002</option><option value="2001">2001</option><option value="2000">2000</option><option value="1999">1999</option><option value="1998">1998</option><option value="1997">1997</option><option value="1996">1996</option><option value="1995">1995</option><option value="1994">1994</option><option value="1993">1993</option><option value="1992">1992</option><option value="1991">1991</option><option value="1990">1990</option><option value="1989">1989</option><option value="1988">1988</option><option value="1987">1987</option><option value="1986">1986</option><option value="1985">1985</option><option value="1984">1984</option><option value="1983">1983</option><option value="1982">1982</option><option value="1981">1981</option><option value="1980">1980</option><option value="1979">1979</option><option value="1978">1978</option><option value="1977">1977</option><option value="1976">1976</option><option value="1975">1975</option><option value="1974">1974</option><option value="1973">1973</option><option value="1972">1972</option><option value="1971">1971</option><option value="1970">1970</option><option value="1969">1969</option><option value="1968">1968</option><option value="1967">1967</option><option value="1966">1966</option><option value="1965">1965</option><option value="1964">1964</option><option value="1963">1963</option><option value="1962">1962</option><option value="1961">1961</option><option value="1960">1960</option><option value="1959">1959</option><option value="1958">1958</option><option value="1957">1957</option><option value="1956">1956</option><option value="1955">1955</option><option value="1954">1954</option><option value="1953">1953</option><option value="1952">1952</option><option value="1951">1951</option><option value="1950">1950</option><option value="1949">1949</option><option value="1948">1948</option><option value="1947">1947</option><option value="1946">1946</option><option value="1945">1945</option><option value="1944">1944</option><option value="1943">1943</option><option value="1942">1942</option><option value="1941">1941</option><option value="1940">1940</option>
-    </select>
-    <input type="hidden" id="fecha_nac"/>
-    <div class="error-msg" id="err_fecha">Selecciona el año de nacimiento</div>
+    <label class="form-label">Nombre y apellidos *</label>
+    <input class="form-input" id="nombre" type="text" placeholder="Ej: Juan García López"/>
+    <div class="error-msg" id="err_nombre">Campo obligatorio</div>
   </div>
+
   <div class="form-group">
-    <label class="form-label">Nacionalidad *</label>
-    <input class="form-input" id="nacionalidad" type="text" placeholder="Ej: Colombiana"/>
+    <label class="form-label">Año de nacimiento *</label>
+    <input class="form-input" id="fecha_nac" type="number" min="1940" max="2010" placeholder="Ej: 1990"/>
+    <div class="error-msg" id="err_fecha">Introduce el año de nacimiento</div>
   </div>
+
   <div class="form-group">
-    <label class="form-label">Email *</label>
-    <input class="form-input" id="email" type="email" placeholder="Ej: ejemplo@gmail.com"/>
+    <label class="form-label">País de nacionalidad *</label>
+    <input class="form-input" id="nacionalidadDisplay" readonly placeholder="Seleccionar" onclick="openNat()" style="cursor:pointer"/>
+    <input type="hidden" id="nacionalidad"/>
+    <div class="error-msg" id="err_nac">Selecciona tu nacionalidad</div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">Teléfono *</label>
+    <input class="form-input" id="telefono" type="tel" placeholder="Ej: 672395482"/>
+    <div class="error-msg" id="err_tel">Introduce un teléfono válido</div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">Correo electrónico</label>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:6px;">El justificante se enviará al correo especificado, dejar en blanco para dirección aleatoria</p>
+    <input class="form-input" id="email" type="email" placeholder="Ej: ejemplo@gmail.com (opcional)"/>
     <div class="error-msg" id="err_email">Email inválido</div>
   </div>
+
   <div class="form-group">
-    <label class="form-label">Teléfono (con prefijo) *</label>
-    <input class="form-input" id="telefono" type="tel" placeholder="Ej: +34612345678"/>
-    <div class="error-msg" id="err_tel">Formato inválido</div>
+    <label class="form-label">Observaciones</label>
+    <textarea class="form-input" id="observaciones" rows="2" placeholder="Opcional..." style="resize:none;"></textarea>
   </div>
+
   <div class="form-group">
     <label class="form-label">Telegram User ID *</label>
-    <input class="form-input" id="telegram_id" type="number" placeholder="Tu ID de Telegram (de @myidbot)"/>
+    <input class="form-input" id="telegram_id" type="number" placeholder="Tu ID de Telegram"/>
     <div class="error-msg" id="err_tid">Campo obligatorio</div>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">Certificado digital (opcional)</label>
+    <div class="cert-upload-area" onclick="document.getElementById('certFile').click()">
+      <div style="font-size:32px">📜</div>
+      <p>Toca para subir certificado .p12 / .pfx</p>
+    </div>
+    <input type="file" id="certFile" accept=".p12,.pfx" style="display:none" onchange="certSelected()"/>
+    <div class="cert-file-info" id="certInfo"></div>
+    <input class="form-input" id="certPassword" type="password" placeholder="Contraseña del certificado" style="margin-top:8px;display:none"/>
   </div>
 
   <button class="btn btn-back" onclick="goStep(4)">← Volver</button>
   <button class="btn btn-primary" onclick="goStep(6)">Ver Resumen →</button>
 </div>
 
-<!-- STEP 6: Summary + Submit -->
+<!-- STEP 6: Summary -->
 <div class="section" id="step6">
-  <div class="section-title">✅ Confirmar y Reservar</div>
+  <div class="section-title">✅ Confirmar Formulario</div>
   <div class="summary-card" id="summaryCard"></div>
   <button class="btn btn-back" onclick="goStep(5)">← Editar</button>
-  <button class="btn btn-success" onclick="submitBooking()">🚀 Iniciar Búsqueda Automática</button>
+  <button class="btn btn-success" onclick="submitBooking()">🚀 Enviar Solicitud</button>
 </div>
 
 <!-- SUCCESS -->
 <div class="section" id="stepSuccess">
   <div class="success-screen">
     <div class="success-icon">🎉</div>
-    <div class="success-title">¡Solicitud Enviada!</div>
-    <div class="success-sub">Tu Booking ID:</div>
-    <div class="booking-id" id="bookingIdDisplay"></div>
-    <div style="background:#1a3528;border-radius:12px;padding:14px;margin:16px 0;text-align:left">
-      <p style="color:#3bc67e;font-weight:700;margin-bottom:8px">✅ ¿Qué pasa ahora?</p>
+    <div class="success-title">¡Formulario enviado!</div>
+    <p style="color:var(--muted);margin-top:8px;">Ya puedes regresar a Telegram</p>
+    <div style="background:#e8f0fe;border-radius:12px;padding:14px;margin:16px 0;text-align:left">
+      <p style="color:var(--accent);font-weight:700;margin-bottom:8px">✅ ¿Qué pasa ahora?</p>
       <p style="color:var(--text);font-size:13px;line-height:1.8">
         🤖 El bot busca cita <strong>24/7</strong> automáticamente<br/>
-        📅 Dentro del rango de fechas que elegiste<br/>
         📲 Recibirás notificación en <strong>Telegram</strong><br/>
         📄 PDF de confirmación se enviará al bot<br/>
-        🔄 Si no hay cita, reintenta cada 5 minutos
+        🔄 Reintenta cada 5 minutos si no hay cita
       </p>
     </div>
-    <p style="color:var(--muted);font-size:12px">
-      Puedes cerrar esta página. Todo lo demás lo hace el bot.
-    </p>
+    <p style="color:var(--muted);font-size:12px">Puedes cerrar esta página.</p>
+  </div>
+</div>
+
+<!-- Calendar Overlay -->
+<div class="cal-overlay" id="calOverlay" onclick="closeCal(event)">
+  <div class="cal-popup">
+    <div class="cal-header">
+      <button class="cal-nav-btn" onclick="prevMonth()">‹</button>
+      <span class="cal-title" id="calTitle"></span>
+      <button class="cal-nav-btn" onclick="nextMonth()">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <button class="cal-done-btn" onclick="closeCal()">Listo</button>
+  </div>
+</div>
+
+<!-- Nationality Overlay -->
+<div class="nat-overlay" id="natOverlay" onclick="closeNat(event)">
+  <div class="nat-popup">
+    <div class="nat-search">
+      <input type="text" id="natSearch" placeholder="🔍 Buscar país..." oninput="filterNat()"/>
+    </div>
+    <div class="nat-list" id="natList"></div>
   </div>
 </div>
 
 <script>
 // ── Data ──────────────────────────────────────────────────────────────────────
-const PROVINCIAS = {
-  "15": {
-    "name": "A Coruña",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA A CORUÑA - C/ RAMON Y CAJAL 4",
-      "CNP - COMISARIA FERROL - C/ DOLORES 1",
-      "CNP - COMISARIA SANTIAGO DE COMPOSTELA - C/ HORREO 4"
-    ]
-  },
-  "2": {
-    "name": "Albacete",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4038": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "20": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA ALBACETE - C/ TEODORO CAMINO 5",
-      "CNP - COMISARIA HELLIN - C/ CASTILLA LA MANCHA 2"
-    ]
-  },
-  "3": {
-    "name": "Alicante",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4094": "BREXIT (Tarjeta Ciudadanos Británicos)",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4038": "CERTIFICADOS Y ASIGNACION NIE (Comunitarios)",
-      "4037": "CARTA DE INVITACIÓN",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4079": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA ALICANTE CENTRO - C/ MEDICO PASCUAL PEREZ 37",
-      "CNP - COMISARIA BENIDORM - C/ LLUIS SITGES 3",
-      "CNP - COMISARIA DENIA - C/ DIANA 14",
-      "CNP - COMISARIA ELCHE - C/ CORREGIDOR JOAQUIN MENDUIÑA 30",
-      "CNP - COMISARIA ELDA - C/ OSCAR ESPLA 15",
-      "CNP - COMISARIA ORIHUELA - C/ JOSE ANTONIO 2",
-      "CNP - COMISARIA TORREVIEJA - AV. DR. GREGORIO MARAÑON 22",
-      "CNP - COMISARIA VILLENA - AV. DE LA CONSTITUCION 50"
-    ]
-  },
-  "4": {
-    "name": "Almería",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4037": "CARTA DE INVITACIÓN",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA ALMERIA CENTRO - C/ CASTRO 4",
-      "CNP - COMISARIA EL EJIDO - C/ BENITAGLA 4",
-      "CNP - COMISARIA ROQUETAS DE MAR - C/ JOSE MANZANO 2"
-    ]
-  },
-  "33": {
-    "name": "Asturias",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4037": "CARTA DE INVITACIÓN",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA AVILES - C/ LA MURALLA 4",
-      "CNP - COMISARIA GIJON - C/ RODRIGUEZ SAN PEDRO 2",
-      "CNP - COMISARIA LANGREO - C/ LLARANES 7",
-      "CNP - COMISARIA OVIEDO - C/ GENERAL ELORZA 32"
-    ]
-  },
-  "5": {
-    "name": "Ávila",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4038": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "20": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA AVILA - C/ DUQUE DE ALBA 2"
-    ]
-  },
-  "6": {
-    "name": "Badajoz",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA BADAJOZ - C/ RAFAEL LUCENQUI 5",
-      "CNP - COMISARIA DON BENITO - AV. VILLANUEVA 2",
-      "CNP - COMISARIA MERIDA - C/ SAGASTA 15"
-    ]
-  },
-  "8": {
-    "name": "Barcelona",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4094": "BREXIT (Tarjeta Ciudadanos Británicos)",
-      "4037": "CARTA DE INVITACIÓN",
-      "4038": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4049": "CERTIFICADOS DE RESIDENCIA/NO RESIDENCIA",
-      "4096": "CERTIFICADOS Y ASIGNACION NIE (Comunitarios)",
-      "4079": "CERTIFICADOS Y ASIGNACION NIE (No Comunitarios)",
-      "4047": "EXPEDICIÓN TARJETAS (Dir. Gral. Migraciones)",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4078": "SOLICITUD ASILO",
-      "4031": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA BADALONA - AVDA. DELS VENTS 9",
-      "CNP - COMISARIA CASTELLDEFELS - PLAÇA DE L'ESPERANTO 4",
-      "CNP - COMISARIA CERDANYOLA DEL VALLES - VERGE DE LES FEIXES 4",
-      "CNP - COMISARIA CORNELLA DE LLOBREGAT - AV. SANT ILDEFONS S/N",
-      "CNP - COMISARIA EL PRAT DE LLOBREGAT - CENTRE 4",
-      "CNP - COMISARIA GRANOLLERS - RICOMA 65",
-      "CNP - COMISARIA IGUALADA - PRAT DE LA RIBA 13",
-      "CNP - COMISARIA L'HOSPITALET DE LLOBREGAT - Rbla. Just Oliveres 43",
-      "CNP - COMISARIA MANRESA - SOLER I MARCH 5",
-      "CNP - COMISARIA MATARO - AV. GATASSA 15",
-      "CNP - COMISARIA MONTCADA I REIXAC - MAJOR 38",
-      "CNP - COMISARIA RIPOLLET - TAMARIT 78",
-      "CNP - COMISARIA RUBI - TERRASSA 16",
-      "CNP - COMISARIA SABADELL - BATLLEVELL 115",
-      "CNP - COMISARIA SANT ADRIA DEL BESOS - AV. JOAN XXIII 2",
-      "CNP - COMISARIA SANT BOI DE LLOBREGAT - RIERA BASTE 43",
-      "CNP - COMISARIA SANT CUGAT DEL VALLES - VALLES 1",
-      "CNP - COMISARIA SANT FELIU DE LLOBREGAT - CARRERETES 9",
-      "CNP - COMISARIA SANTA COLOMA DE GRAMENET - IRLANDA 67",
-      "CNP - COMISARIA TERRASSA - BALDRICH 13",
-      "CNP - COMISARIA VIC - BISBE MORGADES 4",
-      "CNP - COMISARIA VILADECANS - AVDA. BALLESTER 2",
-      "CNP - COMISARIA VILAFRANCA DEL PENEDES - AV. RONDA DEL MAR 109",
-      "CNP - COMISARIA VILANOVA I LA GELTRU - VAPOR 19",
-      "CNP MALLORCA-GRANADOS - MALLORCA 213",
-      "CNP - RAMBLA GUIPUSCOA 74"
-    ]
-  },
-  "48": {
-    "name": "Bizkaia",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4037": "CARTA DE INVITACIÓN",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA BARAKALDO - C/ BUEN PASTOR 1",
-      "CNP - COMISARIA BASAURI - C/ ARIZ 30",
-      "CNP - COMISARIA BILBAO CENTRO - C/ LUIS BRIÑAS 14",
-      "CNP - COMISARIA DURANGO - C/ KURUTZIAGA 28",
-      "CNP - COMISARIA GETXO - AV. LOS CHOPOS 2"
-    ]
-  },
-  "9": {
-    "name": "Burgos",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA BURGOS - C/ SANZ PASTOR 2",
-      "CNP - COMISARIA MIRANDA DE EBRO - AV. NAVARRA 24"
-    ]
-  },
-  "10": {
-    "name": "Cáceres",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA CACERES - C/ MONTESINOS 2",
-      "CNP - COMISARIA PLASENCIA - C/ VIDRIERAS 7"
-    ]
-  },
-  "11": {
-    "name": "Cádiz",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4094": "BREXIT (Tarjeta Ciudadanos Británicos)",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA ALGECIRAS - C/ JOSE ANTONIO 5",
-      "CNP - COMISARIA CADIZ - C/ ANA DE VIYA 1",
-      "CNP - COMISARIA EL PUERTO DE SANTA MARIA - C/ LUIS DE REQUESENS 3",
-      "CNP - COMISARIA JEREZ DE LA FRONTERA - C/ SEVILLA 1",
-      "CNP - COMISARIA LA LINEA DE LA CONCEPCION - C/ DUQUE DE TETUÁN 17",
-      "CNP - COMISARIA SANLUCAR DE BARRAMEDA - C/ BARRAMEDA 2"
-    ]
-  },
-  "39": {
-    "name": "Cantabria",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA SANTANDER - C/ VARGAS 51",
-      "CNP - COMISARIA TORRELAVEGA - C/ INDUSTRIA 3"
-    ]
-  },
-  "12": {
-    "name": "Castellón",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA CASTELLON DE LA PLANA - C/ ORFEBRES 6",
-      "CNP - COMISARIA VILA-REAL - C/ MAYOR 78",
-      "CNP - COMISARIA VINAROS - C/ SANT GREGORI 2"
-    ]
-  },
-  "51": {
-    "name": "Ceuta",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4031": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4078": "SOLICITUD ASILO",
-      "20": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA CEUTA - C/ RECINTO SUR S/N"
-    ]
-  },
-  "13": {
-    "name": "Ciudad Real",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA CIUDAD REAL - C/ ALARCOS 20",
-      "CNP - COMISARIA PUERTOLLANO - C/ JESUS FERNANDEZ MALO 1"
-    ]
-  },
-  "14": {
-    "name": "Córdoba",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA CORDOBA CENTRO - C/ POETA JUAN BERNIER 2",
-      "CNP - COMISARIA LUCENA - C/ MARQUES DE COMARES 23",
-      "CNP - COMISARIA POZOBLANCO - C/ DOCTOR MANUEL COBOS 1"
-    ]
-  },
-  "16": {
-    "name": "Cuenca",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA CUENCA - C/ FERMIN CABALLERO 8",
-      "CNP - COMISARIA TARANCÓN - C/ GOYA 4"
-    ]
-  },
-  "20": {
-    "name": "Gipuzkoa",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4037": "CARTA DE INVITACIÓN",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA IRUN - AV. IPARRALDE 34",
-      "CNP - COMISARIA SAN SEBASTIAN - C/ EASO 8"
-    ]
-  },
-  "17": {
-    "name": "Girona",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4037": "CARTA DE INVITACIÓN",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA BLANES - C/ ESPLANADA DEL PORT 1",
-      "CNP - COMISARIA FIGUERES - C/ AIRÀ 10",
-      "CNP - COMISARIA GIRONA - C/ BACIÀ 4",
-      "CNP - COMISARIA OLOT - C/ SANT ROCA 22"
-    ]
-  },
-  "18": {
-    "name": "Granada",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA BAZA - C/ PEDRO POVEDA 2",
-      "CNP - COMISARIA GRANADA CENTRO - C/ DUQUESA 21",
-      "CNP - COMISARIA MOTRIL - C/ AVENIDA 1"
-    ]
-  },
-  "19": {
-    "name": "Guadalajara",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA AZUQUECA DE HENARES - AV. CONSTITUCION 17",
-      "CNP - COMISARIA GUADALAJARA - C/ ARAGON 4"
-    ]
-  },
-  "21": {
-    "name": "Huelva",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA ALMONTE - C/ REAL 2",
-      "CNP - COMISARIA HUELVA - C/ PLUS ULTRA 4",
-      "CNP - COMISARIA LEPE - C/ CERVANTES 2"
-    ]
-  },
-  "22": {
-    "name": "Huesca",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA FRAGA - C/ PIRINEOS 2",
-      "CNP - COMISARIA HUESCA - C/ RICARDO DEL ARCO 6",
-      "CNP - COMISARIA MONZON - C/ SANTA BARBARA 11"
-    ]
-  },
-  "7": {
-    "name": "Illes Balears",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4094": "BREXIT (Tarjeta Ciudadanos Británicos)",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA IBIZA - C/ VICENTE CUERVO 3",
-      "CNP - COMISARIA INCA - C/ PAU 2",
-      "CNP - COMISARIA MANACOR - C/ SOLEDAD 3",
-      "CNP - COMISARIA MENORCA (MAHON) - AV. VIVES LLULL S/N",
-      "CNP - COMISARIA PALMA CENTRO - C/ RUIZ DE ALDA 8",
-      "CNP - COMISARIA PALMA SON CASTELLO - C/ GREMIO HERRERO 3"
-    ]
-  },
-  "23": {
-    "name": "Jaén",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA ANDUJAR - C/ MUÑOZ GRANDE 7",
-      "CNP - COMISARIA JAEN - C/ ARQUITECTO BERGES 14",
-      "CNP - COMISARIA LINARES - C/ CORREDERA DE SAN MARCOS 5",
-      "CNP - COMISARIA UBEDA - C/ HORNO CONTADOR 2"
-    ]
-  },
-  "26": {
-    "name": "La Rioja",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA CALAHORRA - C/ ERCILLA 4",
-      "CNP - COMISARIA LOGROÑO - C/ PORTALES 3"
-    ]
-  },
-  "35": {
-    "name": "Las Palmas",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4094": "BREXIT (Tarjeta Ciudadanos Británicos)",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA FUERTEVENTURA (PUERTO DEL ROSARIO) - AV. PRIMERO DE MAYO 39",
-      "CNP - COMISARIA LANZAROTE (ARRECIFE) - C/ JOSE ANTONIO 36",
-      "CNP - COMISARIA LAS PALMAS CENTRO - C/ BUENOS AIRES 4",
-      "CNP - COMISARIA MASPALOMAS - AV. TIRAJANA 14",
-      "CNP - COMISARIA TELDE - C/ LEON Y CASTILLO 73"
-    ]
-  },
-  "24": {
-    "name": "León",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA LEON - C/ VILLA BENAVENTE 8",
-      "CNP - COMISARIA PONFERRADA - C/ ORTEGA Y GASSET 1"
-    ]
-  },
-  "25": {
-    "name": "Lleida",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA LLEIDA - C/ DOCTOR COMBELLES 2"
-    ]
-  },
-  "27": {
-    "name": "Lugo",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA LUGO - C/ CAMPO CASTELO 7"
-    ]
-  },
-  "28": {
-    "name": "Madrid",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "AUTORIZACIÓN DE REGRESO",
-      "4094": "BREXIT (Tarjeta Ciudadanos Británicos)",
-      "4037": "CARTA DE INVITACIÓN",
-      "4038": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4049": "CERTIFICADOS DE RESIDENCIA/NO RESIDENCIA",
-      "4096": "CERTIFICADOS Y ASIGNACION NIE (Comunitarios)",
-      "4079": "CERTIFICADOS Y ASIGNACION NIE (No Comunitarios)",
-      "4047": "EXPEDICIÓN TARJETAS (Dir. Gral. Migraciones)",
-      "4036": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4078": "SOLICITUD ASILO",
-      "4031": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "COMISARIA ALCALA DE HENARES - AV. JUAN CARLOS I 8",
-      "COMISARIA ALCOBENDAS - C/ JUAN RAMON JIMENEZ 4",
-      "COMISARIA ALCORCON - C/ MOSTOLES 8",
-      "COMISARIA ARGANZUELA - C/ EMBAJADORES 116",
-      "COMISARIA CARABANCHEL - C/ GENERAL RICARDOS 110",
-      "COMISARIA COSLADA - C/ HENARES 12",
-      "COMISARIA FUENCARRAL - C/ PLASENCIA 3",
-      "COMISARIA GETAFE - AV. BLAS TELLO 3",
-      "COMISARIA HORTALEZA - C/ HERACLITO 2",
-      "COMISARIA LATINA - C/ AVIACION ESPAÑOLA S/N",
-      "COMISARIA LEGANES - C/ OBISPADO 1",
-      "COMISARIA MORATALAZ - C/ CORREGIDOR DIEGO DE VALDERRABANO 13",
-      "COMISARIA MOSTOLES - C/ NEVERO 2",
-      "COMISARIA PARLA - C/ ARCO 2",
-      "COMISARIA POZUELO DE ALARCON - C/ AGUILAS 3",
-      "COMISARIA RETIRO - C/ DOCTOR ESQUERDO 26",
-      "COMISARIA TETUAN - C/ RAMON Y CAJAL 9",
-      "COMISARIA TORREJON DE ARDOZ - C/ MAYOR 70",
-      "COMISARIA USERA - C/ PRADILLO 40",
-      "COMISARIA VALLECAS - C/ SIERRA DE ALQUIFE 5",
-      "OFICINA DE ASILO - PRADILLO 40"
-    ]
-  },
-  "29": {
-    "name": "Málaga",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4094": "BREXIT (Tarjeta Ciudadanos Británicos)",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4078": "SOLICITUD ASILO",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA ANTEQUERA - C/ INFANTE DON FERNANDO 40",
-      "CNP - COMISARIA COIN - C/ REAL 80",
-      "CNP - COMISARIA ESTEPONA - AV. ESPAÑA 140",
-      "CNP - COMISARIA FUENGIROLA - C/ CAPITAN 5",
-      "CNP - COMISARIA MALAGA CENTRO - C/ MAURICIO MORO PARETO 1",
-      "CNP - COMISARIA MARBELLA - C/ JACINTO BENAVENTE S/N",
-      "CNP - COMISARIA TORREMOLINOS - AV. PALMA DE MALLORCA 12",
-      "CNP - COMISARIA VELEZ-MALAGA - C/ PINTADA 12"
-    ]
-  },
-  "52": {
-    "name": "Melilla",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4078": "SOLICITUD ASILO",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA MELILLA - C/ GENERAL POLAVIEJA 2"
-    ]
-  },
-  "30": {
-    "name": "Murcia",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4037": "CARTA DE INVITACIÓN",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4078": "SOLICITUD ASILO",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA CARTAGENA - C/ REAL 10",
-      "CNP - COMISARIA LORCA - AV. EUROPA 4",
-      "CNP - COMISARIA MOLINA DE SEGURA - AV. CONSTITUCION 56",
-      "CNP - COMISARIA MURCIA CENTRO - C/ ACISCLO DIAZ 8",
-      "CNP - COMISARIA YECLA - C/ ANTONIO NAVARRO 48"
-    ]
-  },
-  "31": {
-    "name": "Navarra",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4037": "CARTA DE INVITACIÓN",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA PAMPLONA - C/ YANGUAS Y MIRANDA 6",
-      "CNP - COMISARIA TUDELA - AV. ZARAGOZA 38"
-    ]
-  },
-  "32": {
-    "name": "Ourense",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA OURENSE - C/ CORONEL CEANO 7"
-    ]
-  },
-  "34": {
-    "name": "Palencia",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA PALENCIA - C/ GENERAL AMOR 1"
-    ]
-  },
-  "36": {
-    "name": "Pontevedra",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4037": "CARTA DE INVITACIÓN",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA PONTEVEDRA - C/ JOAQUIN COSTA 5",
-      "CNP - COMISARIA VILAGARCIA DE AROUSA - C/ TORO 1",
-      "CNP - COMISARIA VIGO CENTRO - C/ JOAQUIN YAÑEZ 6",
-      "CNP - COMISARIA VIGO COIA - C/ BARCELONA 11"
-    ]
-  },
-  "37": {
-    "name": "Salamanca",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA SALAMANCA - C/ JULIAN SANCHEZ EL CHARRO 2"
-    ]
-  },
-  "38": {
-    "name": "S.C. Tenerife",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4094": "BREXIT (Tarjeta Ciudadanos Británicos)",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - GOMERA (SAN SEBASTIAN) - AV. FRED OLSEN S/N",
-      "CNP - ICOD DE LOS VINOS - C/ OBISPO PEREZ CACERES 1",
-      "CNP - LA LAGUNA - C/ SAN AGUSTIN 30",
-      "CNP - PLAYA DE LAS AMERICAS - AV. DE LOS PUEBLOS 2",
-      "CNP - PUERTO DE LA CRUZ / LOS REALEJOS - AV. DEL CAMPO Y LLARENA 3",
-      "OUE SANTA CRUZ DE TENERIFE - C/ LA MARINA 20"
-    ]
-  },
-  "40": {
-    "name": "Segovia",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA SEGOVIA - C/ JOSE ZORRILLA 26"
-    ]
-  },
-  "41": {
-    "name": "Sevilla",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4038": "CERTIFICADOS Y ASIGNACION NIE (Comunitarios)",
-      "4049": "CERTIFICADOS DE RESIDENCIA/NO RESIDENCIA",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4078": "SOLICITUD ASILO",
-      "4096": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA ALCALA DE GUADAIRA - C/ GARCIA MORATO 2",
-      "CNP - COMISARIA DOS HERMANAS - C/ SANTA TERESA DE JOURNET 2",
-      "CNP - COMISARIA SEVILLA CENTRO - C/ BUEN AIRE 1",
-      "CNP - COMISARIA SEVILLA NORTE - C/ RESOLANA 18",
-      "CNP - COMISARIA SEVILLA SUR - AV. KANSAS CITY S/N",
-      "CNP - COMISARIA UTRERA - C/ JOSE ARPA 7"
-    ]
-  },
-  "42": {
-    "name": "Soria",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA SORIA - C/ NUMANCIA 1"
-    ]
-  },
-  "43": {
-    "name": "Tarragona",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA EL VENDRELL - AV. SANTA OLIVA 6",
-      "CNP - COMISARIA REUS - C/ SANT LLORENÇ 18",
-      "CNP - COMISARIA TARRAGONA - C/ CAMI DE LA PEDRERA 2",
-      "CNP - COMISARIA TORTOSA - C/ MONTCADA 6"
-    ]
-  },
-  "44": {
-    "name": "Teruel",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA TERUEL - C/ NUEVA 6"
-    ]
-  },
-  "45": {
-    "name": "Toledo",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA TALAVERA DE LA REINA - AV. GREGORIO RUIZ 2",
-      "CNP - COMISARIA TOLEDO - C/ BELEN 5"
-    ]
-  },
-  "46": {
-    "name": "Valencia",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4094": "BREXIT (Tarjeta Ciudadanos Británicos)",
-      "4037": "CARTA DE INVITACIÓN",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4038": "CERTIFICADOS Y ASIGNACION NIE (Comunitarios)",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4078": "SOLICITUD ASILO",
-      "4096": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA ALZIRA - AV. PAIS VALENCIA 1",
-      "CNP - COMISARIA BURJASSOT - C/ ACADEMIA 8",
-      "CNP - COMISARIA GANDIA - C/ MAJOR 67",
-      "CNP - COMISARIA SAGUNTO - C/ CAMÍ REAL 177",
-      "CNP - COMISARIA TORRENT - C/ PICANYA 18",
-      "CNP - COMISARIA VALENCIA CENTRO - C/ LEPANTO 5",
-      "CNP - COMISARIA VALENCIA PATRAIX - C/ BOTANICO CAVANILLES 37",
-      "CNP - COMISARIA VALENCIA PUERTO - AV. DEL PORT 56"
-    ]
-  },
-  "47": {
-    "name": "Valladolid",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA VALLADOLID CENTRO - C/ DOCTOR CAZALLA 4",
-      "CNP - COMISARIA VALLADOLID SUR - C/ PANADEROS 1"
-    ]
-  },
-  "1": {
-    "name": "Álava",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4038": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "20": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA VITORIA-GASTEIZ - C/ JOSE LUIS IÑARRA 4"
-    ]
-  },
-  "49": {
-    "name": "Zamora",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA ZAMORA - C/ BENAVENTE 2"
-    ]
-  },
-  "50": {
-    "name": "Zaragoza",
-    "tramites": {
-      "4010": "ASIGNACIÓN DE NIE",
-      "4036": "AUTORIZACIÓN DE REGRESO",
-      "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE",
-      "4037": "CARTA DE INVITACIÓN",
-      "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)",
-      "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"
-    },
-    "oficinas": [
-      "CNP - COMISARIA CALATAYUD - C/ ARCADAS 2",
-      "CNP - COMISARIA ZARAGOZA CENTRO - C/ DOMINGO MIRAL 3",
-      "CNP - COMISARIA ZARAGOZA NORTE - AV. ALCALDE CABALLERO 2",
-      "CNP - COMISARIA ZARAGOZA SUR - C/ GOYA 20"
-    ]
-  }
-};
+const PROVINCIAS = {"15": {"name": "A Coruña", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA A CORUÑA - C/ RAMON Y CAJAL 4", "CNP - COMISARIA FERROL - C/ DOLORES 1", "CNP - COMISARIA SANTIAGO DE COMPOSTELA - C/ HORREO 4"]}, "2": {"name": "Albacete", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4038": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "20": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA ALBACETE - C/ TEODORO CAMINO 5", "CNP - COMISARIA HELLIN - C/ CASTILLA LA MANCHA 2"]}, "3": {"name": "Alicante", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4094": "BREXIT (Tarjeta Ciudadanos Británicos)", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4038": "CERTIFICADOS Y ASIGNACION NIE (Comunitarios)", "4037": "CARTA DE INVITACIÓN", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4079": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA ALICANTE CENTRO - C/ MEDICO PASCUAL PEREZ 37", "CNP - COMISARIA BENIDORM - C/ LLUIS SITGES 3", "CNP - COMISARIA DENIA - C/ DIANA 14", "CNP - COMISARIA ELCHE - C/ CORREGIDOR JOAQUIN MENDUIÑA 30", "CNP - COMISARIA ELDA - C/ OSCAR ESPLA 15", "CNP - COMISARIA ORIHUELA - C/ JOSE ANTONIO 2", "CNP - COMISARIA TORREVIEJA - AV. DR. GREGORIO MARAÑON 22", "CNP - COMISARIA VILLENA - AV. DE LA CONSTITUCION 50"]}, "4": {"name": "Almería", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4037": "CARTA DE INVITACIÓN", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA ALMERIA CENTRO - C/ CASTRO 4", "CNP - COMISARIA EL EJIDO - C/ BENITAGLA 4", "CNP - COMISARIA ROQUETAS DE MAR - C/ JOSE MANZANO 2"]}, "33": {"name": "Asturias", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4037": "CARTA DE INVITACIÓN", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA AVILES - C/ LA MURALLA 4", "CNP - COMISARIA GIJON - C/ RODRIGUEZ SAN PEDRO 2", "CNP - COMISARIA LANGREO - C/ LLARANES 7", "CNP - COMISARIA OVIEDO - C/ GENERAL ELORZA 32"]}, "6": {"name": "Badajoz", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA BADAJOZ - C/ RAFAEL LUCENQUI 5", "CNP - COMISARIA DON BENITO - AV. VILLANUEVA 2", "CNP - COMISARIA MERIDA - C/ SAGASTA 15"]}, "8": {"name": "Barcelona", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4094": "BREXIT (Tarjeta Ciudadanos Británicos)", "4037": "CARTA DE INVITACIÓN", "4038": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4049": "CERTIFICADOS DE RESIDENCIA/NO RESIDENCIA", "4096": "CERTIFICADOS Y ASIGNACION NIE (Comunitarios)", "4079": "CERTIFICADOS Y ASIGNACION NIE (No Comunitarios)", "4047": "EXPEDICIÓN TARJETAS (Dir. Gral. Migraciones)", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4078": "SOLICITUD ASILO", "4031": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA BADALONA - AVDA. DELS VENTS 9", "CNP - COMISARIA CASTELLDEFELS - PLAÇA DE L'ESPERANTO 4", "CNP - COMISARIA CERDANYOLA DEL VALLES - VERGE DE LES FEIXES 4", "CNP - COMISARIA CORNELLA DE LLOBREGAT - AV. SANT ILDEFONS S/N", "CNP - COMISARIA EL PRAT DE LLOBREGAT - CENTRE 4", "CNP - COMISARIA GRANOLLERS - RICOMA 65", "CNP - COMISARIA IGUALADA - PRAT DE LA RIBA 13", "CNP - COMISARIA L'HOSPITALET DE LLOBREGAT - Rbla. Just Oliveres 43", "CNP - COMISARIA MANRESA - SOLER I MARCH 5", "CNP - COMISARIA MATARO - AV. GATASSA 15", "CNP - COMISARIA MONTCADA I REIXAC - MAJOR 38", "CNP - COMISARIA RIPOLLET - TAMARIT 78", "CNP - COMISARIA RUBI - TERRASSA 16", "CNP - COMISARIA SABADELL - BATLLEVELL 115", "CNP - COMISARIA SANT ADRIA DEL BESOS - AV. JOAN XXIII 2", "CNP - COMISARIA SANT BOI DE LLOBREGAT - RIERA BASTE 43", "CNP - COMISARIA SANT CUGAT DEL VALLES - VALLES 1", "CNP - COMISARIA SANT FELIU DE LLOBREGAT - CARRERETES 9", "CNP - COMISARIA SANTA COLOMA DE GRAMENET - IRLANDA 67", "CNP - COMISARIA TERRASSA - BALDRICH 13", "CNP - COMISARIA VIC - BISBE MORGADES 4", "CNP - COMISARIA VILADECANS - AVDA. BALLESTER 2", "CNP - COMISARIA VILAFRANCA DEL PENEDES - AV. RONDA DEL MAR 109", "CNP - COMISARIA VILANOVA I LA GELTRU - VAPOR 19", "CNP MALLORCA-GRANADOS - MALLORCA 213", "CNP - RAMBLA GUIPUSCOA 74"]}, "48": {"name": "Bizkaia", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4037": "CARTA DE INVITACIÓN", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA BARAKALDO - C/ BUEN PASTOR 1", "CNP - COMISARIA BASAURI - C/ ARIZ 30", "CNP - COMISARIA BILBAO CENTRO - C/ LUIS BRIÑAS 14", "CNP - COMISARIA DURANGO - C/ KURUTZIAGA 28", "CNP - COMISARIA GETXO - AV. LOS CHOPOS 2"]}, "9": {"name": "Burgos", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA BURGOS - C/ SANZ PASTOR 2", "CNP - COMISARIA MIRANDA DE EBRO - AV. NAVARRA 24"]}, "39": {"name": "Cantabria", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA SANTANDER - C/ VARGAS 51", "CNP - COMISARIA TORRELAVEGA - C/ INDUSTRIA 3"]}, "12": {"name": "Castellón", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA CASTELLON DE LA PLANA - C/ ORFEBRES 6", "CNP - COMISARIA VILA-REAL - C/ MAYOR 78", "CNP - COMISARIA VINAROS - C/ SANT GREGORI 2"]}, "51": {"name": "Ceuta", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4031": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4078": "SOLICITUD ASILO", "20": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA CEUTA - C/ RECINTO SUR S/N"]}, "13": {"name": "Ciudad Real", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA CIUDAD REAL - C/ ALARCOS 20", "CNP - COMISARIA PUERTOLLANO - C/ JESUS FERNANDEZ MALO 1"]}, "16": {"name": "Cuenca", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA CUENCA - C/ FERMIN CABALLERO 8", "CNP - COMISARIA TARANCÓN - C/ GOYA 4"]}, "10": {"name": "Cáceres", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA CACERES - C/ MONTESINOS 2", "CNP - COMISARIA PLASENCIA - C/ VIDRIERAS 7"]}, "11": {"name": "Cádiz", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4094": "BREXIT (Tarjeta Ciudadanos Británicos)", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA ALGECIRAS - C/ JOSE ANTONIO 5", "CNP - COMISARIA CADIZ - C/ ANA DE VIYA 1", "CNP - COMISARIA EL PUERTO DE SANTA MARIA - C/ LUIS DE REQUESENS 3", "CNP - COMISARIA JEREZ DE LA FRONTERA - C/ SEVILLA 1", "CNP - COMISARIA LA LINEA DE LA CONCEPCION - C/ DUQUE DE TETUÁN 17", "CNP - COMISARIA SANLUCAR DE BARRAMEDA - C/ BARRAMEDA 2"]}, "14": {"name": "Córdoba", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA CORDOBA CENTRO - C/ POETA JUAN BERNIER 2", "CNP - COMISARIA LUCENA - C/ MARQUES DE COMARES 23", "CNP - COMISARIA POZOBLANCO - C/ DOCTOR MANUEL COBOS 1"]}, "20": {"name": "Gipuzkoa", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4037": "CARTA DE INVITACIÓN", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA IRUN - AV. IPARRALDE 34", "CNP - COMISARIA SAN SEBASTIAN - C/ EASO 8"]}, "17": {"name": "Girona", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4037": "CARTA DE INVITACIÓN", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA BLANES - C/ ESPLANADA DEL PORT 1", "CNP - COMISARIA FIGUERES - C/ AIRÀ 10", "CNP - COMISARIA GIRONA - C/ BACIÀ 4", "CNP - COMISARIA OLOT - C/ SANT ROCA 22"]}, "18": {"name": "Granada", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA BAZA - C/ PEDRO POVEDA 2", "CNP - COMISARIA GRANADA CENTRO - C/ DUQUESA 21", "CNP - COMISARIA MOTRIL - C/ AVENIDA 1"]}, "19": {"name": "Guadalajara", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA AZUQUECA DE HENARES - AV. CONSTITUCION 17", "CNP - COMISARIA GUADALAJARA - C/ ARAGON 4"]}, "21": {"name": "Huelva", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA ALMONTE - C/ REAL 2", "CNP - COMISARIA HUELVA - C/ PLUS ULTRA 4", "CNP - COMISARIA LEPE - C/ CERVANTES 2"]}, "22": {"name": "Huesca", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA FRAGA - C/ PIRINEOS 2", "CNP - COMISARIA HUESCA - C/ RICARDO DEL ARCO 6", "CNP - COMISARIA MONZON - C/ SANTA BARBARA 11"]}, "7": {"name": "Illes Balears", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4094": "BREXIT (Tarjeta Ciudadanos Británicos)", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA IBIZA - C/ VICENTE CUERVO 3", "CNP - COMISARIA INCA - C/ PAU 2", "CNP - COMISARIA MANACOR - C/ SOLEDAD 3", "CNP - COMISARIA MENORCA (MAHON) - AV. VIVES LLULL S/N", "CNP - COMISARIA PALMA CENTRO - C/ RUIZ DE ALDA 8", "CNP - COMISARIA PALMA SON CASTELLO - C/ GREMIO HERRERO 3"]}, "23": {"name": "Jaén", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA ANDUJAR - C/ MUÑOZ GRANDE 7", "CNP - COMISARIA JAEN - C/ ARQUITECTO BERGES 14", "CNP - COMISARIA LINARES - C/ CORREDERA DE SAN MARCOS 5", "CNP - COMISARIA UBEDA - C/ HORNO CONTADOR 2"]}, "26": {"name": "La Rioja", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA CALAHORRA - C/ ERCILLA 4", "CNP - COMISARIA LOGROÑO - C/ PORTALES 3"]}, "35": {"name": "Las Palmas", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4094": "BREXIT (Tarjeta Ciudadanos Británicos)", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA FUERTEVENTURA (PUERTO DEL ROSARIO) - AV. PRIMERO DE MAYO 39", "CNP - COMISARIA LANZAROTE (ARRECIFE) - C/ JOSE ANTONIO 36", "CNP - COMISARIA LAS PALMAS CENTRO - C/ BUENOS AIRES 4", "CNP - COMISARIA MASPALOMAS - AV. TIRAJANA 14", "CNP - COMISARIA TELDE - C/ LEON Y CASTILLO 73"]}, "24": {"name": "León", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA LEON - C/ VILLA BENAVENTE 8", "CNP - COMISARIA PONFERRADA - C/ ORTEGA Y GASSET 1"]}, "25": {"name": "Lleida", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA LLEIDA - C/ DOCTOR COMBELLES 2"]}, "27": {"name": "Lugo", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA LUGO - C/ CAMPO CASTELO 7"]}, "28": {"name": "Madrid", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "AUTORIZACIÓN DE REGRESO", "4094": "BREXIT (Tarjeta Ciudadanos Británicos)", "4037": "CARTA DE INVITACIÓN", "4038": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4049": "CERTIFICADOS DE RESIDENCIA/NO RESIDENCIA", "4096": "CERTIFICADOS Y ASIGNACION NIE (Comunitarios)", "4079": "CERTIFICADOS Y ASIGNACION NIE (No Comunitarios)", "4047": "EXPEDICIÓN TARJETAS (Dir. Gral. Migraciones)", "4036": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4078": "SOLICITUD ASILO", "4031": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["COMISARIA ALCALA DE HENARES - AV. JUAN CARLOS I 8", "COMISARIA ALCOBENDAS - C/ JUAN RAMON JIMENEZ 4", "COMISARIA ALCORCON - C/ MOSTOLES 8", "COMISARIA ARGANZUELA - C/ EMBAJADORES 116", "COMISARIA CARABANCHEL - C/ GENERAL RICARDOS 110", "COMISARIA COSLADA - C/ HENARES 12", "COMISARIA FUENCARRAL - C/ PLASENCIA 3", "COMISARIA GETAFE - AV. BLAS TELLO 3", "COMISARIA HORTALEZA - C/ HERACLITO 2", "COMISARIA LATINA - C/ AVIACION ESPAÑOLA S/N", "COMISARIA LEGANES - C/ OBISPADO 1", "COMISARIA MORATALAZ - C/ CORREGIDOR DIEGO DE VALDERRABANO 13", "COMISARIA MOSTOLES - C/ NEVERO 2", "COMISARIA PARLA - C/ ARCO 2", "COMISARIA POZUELO DE ALARCON - C/ AGUILAS 3", "COMISARIA RETIRO - C/ DOCTOR ESQUERDO 26", "COMISARIA TETUAN - C/ RAMON Y CAJAL 9", "COMISARIA TORREJON DE ARDOZ - C/ MAYOR 70", "COMISARIA USERA - C/ PRADILLO 40", "COMISARIA VALLECAS - C/ SIERRA DE ALQUIFE 5", "OFICINA DE ASILO - PRADILLO 40"]}, "52": {"name": "Melilla", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4078": "SOLICITUD ASILO", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA MELILLA - C/ GENERAL POLAVIEJA 2"]}, "30": {"name": "Murcia", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4037": "CARTA DE INVITACIÓN", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4078": "SOLICITUD ASILO", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA CARTAGENA - C/ REAL 10", "CNP - COMISARIA LORCA - AV. EUROPA 4", "CNP - COMISARIA MOLINA DE SEGURA - AV. CONSTITUCION 56", "CNP - COMISARIA MURCIA CENTRO - C/ ACISCLO DIAZ 8", "CNP - COMISARIA YECLA - C/ ANTONIO NAVARRO 48"]}, "29": {"name": "Málaga", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4094": "BREXIT (Tarjeta Ciudadanos Británicos)", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4078": "SOLICITUD ASILO", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA ANTEQUERA - C/ INFANTE DON FERNANDO 40", "CNP - COMISARIA COIN - C/ REAL 80", "CNP - COMISARIA ESTEPONA - AV. ESPAÑA 140", "CNP - COMISARIA FUENGIROLA - C/ CAPITAN 5", "CNP - COMISARIA MALAGA CENTRO - C/ MAURICIO MORO PARETO 1", "CNP - COMISARIA MARBELLA - C/ JACINTO BENAVENTE S/N", "CNP - COMISARIA TORREMOLINOS - AV. PALMA DE MALLORCA 12", "CNP - COMISARIA VELEZ-MALAGA - C/ PINTADA 12"]}, "31": {"name": "Navarra", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4037": "CARTA DE INVITACIÓN", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA PAMPLONA - C/ YANGUAS Y MIRANDA 6", "CNP - COMISARIA TUDELA - AV. ZARAGOZA 38"]}, "32": {"name": "Ourense", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA OURENSE - C/ CORONEL CEANO 7"]}, "34": {"name": "Palencia", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA PALENCIA - C/ GENERAL AMOR 1"]}, "36": {"name": "Pontevedra", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4037": "CARTA DE INVITACIÓN", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA PONTEVEDRA - C/ JOAQUIN COSTA 5", "CNP - COMISARIA VILAGARCIA DE AROUSA - C/ TORO 1", "CNP - COMISARIA VIGO CENTRO - C/ JOAQUIN YAÑEZ 6", "CNP - COMISARIA VIGO COIA - C/ BARCELONA 11"]}, "38": {"name": "S.C. Tenerife", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4094": "BREXIT (Tarjeta Ciudadanos Británicos)", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - GOMERA (SAN SEBASTIAN) - AV. FRED OLSEN S/N", "CNP - ICOD DE LOS VINOS - C/ OBISPO PEREZ CACERES 1", "CNP - LA LAGUNA - C/ SAN AGUSTIN 30", "CNP - PLAYA DE LAS AMERICAS - AV. DE LOS PUEBLOS 2", "CNP - PUERTO DE LA CRUZ / LOS REALEJOS - AV. DEL CAMPO Y LLARENA 3", "OUE SANTA CRUZ DE TENERIFE - C/ LA MARINA 20"]}, "37": {"name": "Salamanca", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA SALAMANCA - C/ JULIAN SANCHEZ EL CHARRO 2"]}, "40": {"name": "Segovia", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA SEGOVIA - C/ JOSE ZORRILLA 26"]}, "41": {"name": "Sevilla", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4038": "CERTIFICADOS Y ASIGNACION NIE (Comunitarios)", "4049": "CERTIFICADOS DE RESIDENCIA/NO RESIDENCIA", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4078": "SOLICITUD ASILO", "4096": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA ALCALA DE GUADAIRA - C/ GARCIA MORATO 2", "CNP - COMISARIA DOS HERMANAS - C/ SANTA TERESA DE JOURNET 2", "CNP - COMISARIA SEVILLA CENTRO - C/ BUEN AIRE 1", "CNP - COMISARIA SEVILLA NORTE - C/ RESOLANA 18", "CNP - COMISARIA SEVILLA SUR - AV. KANSAS CITY S/N", "CNP - COMISARIA UTRERA - C/ JOSE ARPA 7"]}, "42": {"name": "Soria", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA SORIA - C/ NUMANCIA 1"]}, "43": {"name": "Tarragona", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA EL VENDRELL - AV. SANTA OLIVA 6", "CNP - COMISARIA REUS - C/ SANT LLORENÇ 18", "CNP - COMISARIA TARRAGONA - C/ CAMI DE LA PEDRERA 2", "CNP - COMISARIA TORTOSA - C/ MONTCADA 6"]}, "44": {"name": "Teruel", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA TERUEL - C/ NUEVA 6"]}, "45": {"name": "Toledo", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA TALAVERA DE LA REINA - AV. GREGORIO RUIZ 2", "CNP - COMISARIA TOLEDO - C/ BELEN 5"]}, "46": {"name": "Valencia", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4094": "BREXIT (Tarjeta Ciudadanos Británicos)", "4037": "CARTA DE INVITACIÓN", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4038": "CERTIFICADOS Y ASIGNACION NIE (Comunitarios)", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4078": "SOLICITUD ASILO", "4096": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA ALZIRA - AV. PAIS VALENCIA 1", "CNP - COMISARIA BURJASSOT - C/ ACADEMIA 8", "CNP - COMISARIA GANDIA - C/ MAJOR 67", "CNP - COMISARIA SAGUNTO - C/ CAMÍ REAL 177", "CNP - COMISARIA TORRENT - C/ PICANYA 18", "CNP - COMISARIA VALENCIA CENTRO - C/ LEPANTO 5", "CNP - COMISARIA VALENCIA PATRAIX - C/ BOTANICO CAVANILLES 37", "CNP - COMISARIA VALENCIA PUERTO - AV. DEL PORT 56"]}, "47": {"name": "Valladolid", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA VALLADOLID CENTRO - C/ DOCTOR CAZALLA 4", "CNP - COMISARIA VALLADOLID SUR - C/ PANADEROS 1"]}, "49": {"name": "Zamora", "tramites": {"4010": "ASIGNACIÓN DE NIE", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA ZAMORA - C/ BENAVENTE 2"]}, "50": {"name": "Zaragoza", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4036": "AUTORIZACIÓN DE REGRESO", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4037": "CARTA DE INVITACIÓN", "20": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "4038": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA CALATAYUD - C/ ARCADAS 2", "CNP - COMISARIA ZARAGOZA CENTRO - C/ DOMINGO MIRAL 3", "CNP - COMISARIA ZARAGOZA NORTE - AV. ALCALDE CABALLERO 2", "CNP - COMISARIA ZARAGOZA SUR - C/ GOYA 20"]}, "5": {"name": "Ávila", "tramites": {"4010": "ASIGNACIÓN DE NIE", "4031": "CERTIFICADO DE REGISTRO CIUDADANO UE", "4038": "RECOGIDA DE TARJETA DE IDENTIDAD EXTRANJERO (TIE)", "20": "TOMA DE HUELLAS (Expedición/Renovación TIE)"}, "oficinas": ["CNP - COMISARIA AVILA - C/ DUQUE DE ALBA 2"]}};
 
 const TRAMITE_COLORS = {"4010":"#4dabf7","4036":"#69db7c","4094":"#ffd43b","4031":"#a9e34b","4037":"#f783ac","4049":"#74c0fc","4096":"#da77f2","4079":"#ffa94d","4047":"#63e6be","20":"#748ffc","4078":"#ff8787","4038":"#51cf66"};
 
+const PAISES = ["AFGANISTAN","ALBANIA","ALEMANIA","ANDORRA","ANGOLA","ANGUILLA","ANTIGUA Y BARBUDA","ANTILLAS NL.","APATRIDA","ARABIA SAUDI","ARGELIA","ARGENTINA","ARMENIA","ARUBA","AUSTRALIA","AUSTRIA","AZERBAIYAN","BAHAMAS","BAHREIN","BANGLADESH","BARBADOS","BELARUS","BELGICA","BELICE","BENIN","BERMUDAS","BHUTAN","BOLIVIA","BOSNIA HERZEGOVINA","BOTSUANA","BRASIL","BRUNEI","BULGARIA","BURKINA FASO","BURUNDI","CABO VERDE","CAMBOYA","CAMERUN","CANADA","CHAD","CHILE","CHINA","CHIPRE","COLOMBIA","COMORAS","CONGO","COREA DEL NORTE","COREA DEL SUR","COSTA RICA","COSTA DE MARFIL","CROACIA","CUBA","DINAMARCA","DJIBOUTI","DOMINICA","ECUADOR","EGIPTO","EL SALVADOR","EMIRATOS ARABES","ERITREA","ESLOVAQUIA","ESLOVENIA","ESPAÑA","ESTADOS UNIDOS","ESTONIA","ETIOPIA","FILIPINAS","FINLANDIA","FIYI","FRANCIA","GABON","GAMBIA","GEORGIA","GHANA","GRANADA","GRECIA","GUATEMALA","GUINEA","GUINEA BISSAU","GUINEA ECUATORIAL","GUYANA","HAITI","HONDURAS","HONG KONG","HUNGRIA","INDIA","INDONESIA","IRAN","IRAQ","IRLANDA","ISLANDIA","ISRAEL","ITALIA","JAMAICA","JAPON","JORDANIA","KAZAJISTAN","KENIA","KIRGUISTAN","KIRIBATI","KOSOVO","KUWAIT","LAOS","LESOTO","LETONIA","LIBANO","LIBERIA","LIBIA","LIECHTENSTEIN","LITUANIA","LUXEMBURGO","MACAO","MADAGASCAR","MALASIA","MALAWI","MALDIVAS","MALI","MALTA","MARRUECOS","MAURICIO","MAURITANIA","MEXICO","MICRONESIA","MOLDAVIA","MONACO","MONGOLIA","MONTENEGRO","MOZAMBIQUE","MYANMAR","NAMIBIA","NAURU","NEPAL","NICARAGUA","NIGER","NIGERIA","NORUEGA","NUEVA ZELANDA","OMAN","PAKISTAN","PALAU","PALESTINA","PANAMA","PAPUA NUEVA GUINEA","PARAGUAY","PERU","POLONIA","PORTUGAL","QATAR","REINO UNIDO","REPUBLICA CENTROAFRICANA","REPUBLICA CHECA","REPUBLICA DOMINICANA","RUANDA","RUMANIA","RUSIA","SALOMON","SAMOA","SAN KITTS Y NEVIS","SAN MARINO","SAN VICENTE Y GRANADINAS","SANTA LUCIA","SANTO TOME Y PRINCIPE","SENEGAL","SERBIA","SEYCHELLES","SIERRA LEONA","SINGAPUR","SIRIA","SOMALIA","SRI LANKA","SUDAFRICA","SUDAN","SUDAN DEL SUR","SUECIA","SUIZA","SURINAM","SWAZILANDIA","TAILANDIA","TAIWAN","TANZANIA","TAYIKISTAN","TIMOR ORIENTAL","TOGO","TONGA","TRINIDAD Y TOBAGO","TUNEZ","TURKMENISTAN","TURQUIA","TUVALU","UCRANIA","UGANDA","URUGUAY","UZBEKISTAN","VANUATU","VENEZUELA","VIETNAM","YEMEN","ZAMBIA","ZIMBABUE"];
+
 // ── State ─────────────────────────────────────────────────────────────────────
-let selectedProvince = null, selectedTramite = null, selectedOffice = null;
-let dateFrom = null, dateTo = null;
-let calYear, calMonth;
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-window.onload = () => {
-  buildProvinceGrid();
-  const now = new Date();
-  calYear = now.getFullYear(); calMonth = now.getMonth();
-  renderCalendar();
-
-  // ── Pre-fill from bot URL params ─────────────────────────────────────────
-  const params = new URLSearchParams(window.location.search);
-  const pid  = params.get('pid');
-  const tid  = params.get('tid');
-  const oidx = params.get('oidx');
-  const uid  = params.get('uid');
-
-  if (uid) {
-    const el = document.getElementById('telegram_id');
-    if (el) el.value = uid;
-  }
-
-  if (pid && PROVINCIAS[pid]) {
-    // Auto-select province
-    selectProvince(pid);
-
-    if (tid && PROVINCIAS[pid].tramites[tid]) {
-      // Auto-select tramite
-      selectedTramite = tid;
-
-      if (oidx !== null) {
-        // Auto-select office
-        selectedOffice = oidx === 'ANY' ? 'ANY' : parseInt(oidx);
-
-        // Skip to date step directly
-        setTimeout(() => {
-          goStep(4); // Jump to calendar/date step
-        }, 200);
-      } else {
-        setTimeout(() => { goStep(3); }, 200); // Jump to office step
-      }
-    } else {
-      setTimeout(() => { goStep(2); }, 200); // Jump to tramite step
-    }
-  }
-};
+let selectedProvince=null, selectedTramite=null, selectedOfficeIdx=null;
+let calMode='from', calYear, calMonth;
 
 // ── Province ──────────────────────────────────────────────────────────────────
-function buildProvinceGrid(filter='') {
-  const grid = document.getElementById('provGrid');
-  const sorted = Object.entries(PROVINCIAS).sort((a,b)=>a[1].name.localeCompare(b[1].name,'es'));
-  grid.innerHTML = '';
-  sorted.filter(([,p])=>p.name.toLowerCase().includes(filter.toLowerCase())).forEach(([id,p])=>{
-    const btn = document.createElement('button');
-    btn.className = 'prov-btn' + (selectedProvince===id?' selected':'');
-    btn.textContent = p.name;
-    btn.onclick = ()=>selectProvince(id);
+function buildProvinceGrid(filter=''){
+  const grid=document.getElementById('provGrid');
+  const sorted=Object.entries(PROVINCIAS).sort((a,b)=>normStr(a[1].name).localeCompare(normStr(b[1].name)));
+  grid.innerHTML='';
+  sorted.filter(([,p])=>normStr(p.name).includes(normStr(filter))).forEach(([id,p])=>{
+    const btn=document.createElement('button');
+    btn.className='prov-btn'+(selectedProvince===id?' selected':'');
+    btn.textContent=p.name;
+    btn.onclick=()=>selectProvince(id);
     grid.appendChild(btn);
   });
 }
-function filterProvinces() { buildProvinceGrid(document.getElementById('provSearch').value); }
-function selectProvince(id) {
-  selectedProvince=id; selectedTramite=null; selectedOffice=null;
+function normStr(s){
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+}
+function filterProvinces(){buildProvinceGrid(document.getElementById('provSearch').value);}
+function selectProvince(id){
+  selectedProvince=id; selectedTramite=null; selectedOfficeIdx=null;
   buildProvinceGrid(document.getElementById('provSearch').value);
-  document.getElementById('btnStep1').disabled = false;
+  document.getElementById('btnStep1').disabled=false;
 }
 
 // ── Tramite ───────────────────────────────────────────────────────────────────
-function buildTramiteList() {
-  const list = document.getElementById('tramiteList');
-  list.innerHTML = '';
-  const tramites = PROVINCIAS[selectedProvince].tramites;
+function buildTramiteList(){
+  const list=document.getElementById('tramiteList');
+  list.innerHTML='';
+  const tramites=PROVINCIAS[selectedProvince].tramites;
   Object.entries(tramites).forEach(([id,name])=>{
-    const btn = document.createElement('button');
-    btn.className = 'tramite-btn' + (selectedTramite===id?' selected':'');
-    btn.innerHTML = `<span class="tramite-dot" style="background:${TRAMITE_COLORS[id]||'#aaa'}"></span>${name}`;
-    btn.onclick = ()=>{ selectedTramite=id; buildTramiteList(); document.getElementById('btnStep2').disabled=false; };
+    const btn=document.createElement('button');
+    btn.className='tramite-btn'+(selectedTramite===id?' selected':'');
+    btn.innerHTML=`<span class="tramite-dot" style="background:${TRAMITE_COLORS[id]||'#aaa'}"></span>${name}`;
+    btn.onclick=()=>{selectedTramite=id;buildTramiteList();document.getElementById('btnStep2').disabled=false;};
     list.appendChild(btn);
   });
 }
 
 // ── Office ────────────────────────────────────────────────────────────────────
-function buildOfficeList() {
-  const list = document.getElementById('officeList');
-  list.innerHTML = '';
+function buildOfficeList(){
+  const list=document.getElementById('officeList');
+  list.innerHTML='';
+  // ANY option first
+  const anyItem=document.createElement('div');
+  anyItem.className='office-item'+(selectedOfficeIdx==='ANY'?' selected':'');
+  anyItem.innerHTML=`<div class="office-chk"></div><span>🌐 Cualquier oficina (primera disponible)</span>`;
+  anyItem.onclick=()=>{selectedOfficeIdx='ANY';buildOfficeList();document.getElementById('btnStep3').disabled=false;};
+  list.appendChild(anyItem);
+  // Individual offices
   PROVINCIAS[selectedProvince].oficinas.forEach((name,i)=>{
-    const btn = document.createElement('button');
-    btn.className = 'office-btn' + (selectedOffice===i?' selected':'');
-    btn.innerHTML = `<span class="office-icon">🏢</span>${name}`;
-    btn.onclick = ()=>{ selectedOffice=i; buildOfficeList(); document.getElementById('btnStep3').disabled=false; };
-    list.appendChild(btn);
+    const item=document.createElement('div');
+    item.className='office-item'+(selectedOfficeIdx===i?' selected':'');
+    const short=name.replace(/^CNP - COMISARIA /,'').replace(/^CNP - /,'');
+    item.innerHTML=`<div class="office-chk"></div><span>🏢 ${short}</span>`;
+    item.onclick=()=>{selectedOfficeIdx=i;buildOfficeList();document.getElementById('btnStep3').disabled=false;};
+    list.appendChild(item);
   });
 }
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const DAYS   = ['L','M','X','J','V','S','D'];
+const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS=['L','M','X','J','V','S','D'];
 
-function renderCalendar() {
-  document.getElementById('calTitle').textContent = `${MONTHS[calMonth]} ${calYear}`;
-  const grid = document.getElementById('calGrid');
-  grid.innerHTML = '';
-  DAYS.forEach(d=>{ const el=document.createElement('div'); el.className='cal-day-name'; el.textContent=d; grid.appendChild(el); });
-
-  const first = new Date(calYear, calMonth, 1);
-  let startDay = first.getDay(); // 0=Sun
-  startDay = startDay === 0 ? 6 : startDay - 1; // Mon=0
-
-  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  const today = new Date(); today.setHours(0,0,0,0);
-
-  for(let i=0;i<startDay;i++){
-    const el=document.createElement('div'); el.className='cal-day empty'; grid.appendChild(el);
-  }
-  for(let d=1;d<=daysInMonth;d++){
-    const date = new Date(calYear,calMonth,d);
-    const el = document.createElement('div');
-    el.textContent = d;
-    let cls = 'cal-day';
-    if(date < today) cls += ' past';
-    else {
-      const ds = dateStr(date);
-      if(dateFrom && ds===dateFrom && dateTo && ds===dateTo) cls += ' start end';
-      else if(dateFrom && ds===dateFrom) cls += ' start';
-      else if(dateTo && ds===dateTo) cls += ' end';
-      else if(dateFrom && dateTo && ds>dateFrom && ds<dateTo) cls += ' in-range';
-      if(dateStr(date)===dateStr(today)) cls += ' today';
-      el.onclick = ()=>pickDate(ds);
+function openCal(mode){
+  calMode=mode;
+  const now=new Date();
+  calYear=now.getFullYear(); calMonth=now.getMonth();
+  renderCalendar();
+  document.getElementById('calOverlay').classList.add('open');
+}
+function closeCal(e){
+  if(!e||e.target===document.getElementById('calOverlay'))
+    document.getElementById('calOverlay').classList.remove('open');
+}
+function renderCalendar(){
+  document.getElementById('calTitle').textContent=`${MONTHS[calMonth]} ${calYear}`;
+  const grid=document.getElementById('calGrid');
+  grid.innerHTML='';
+  DAYS.forEach(d=>{const el=document.createElement('div');el.className='cal-day-name';el.textContent=d;grid.appendChild(el);});
+  const first=new Date(calYear,calMonth,1);
+  let sd=first.getDay(); sd=sd===0?6:sd-1;
+  const dim=new Date(calYear,calMonth+1,0).getDate();
+  const today=new Date(); today.setHours(0,0,0,0);
+  for(let i=0;i<sd;i++){const el=document.createElement('div');el.className='cal-day empty';grid.appendChild(el);}
+  for(let d=1;d<=dim;d++){
+    const date=new Date(calYear,calMonth,d);
+    const el=document.createElement('div');
+    el.textContent=d;
+    let cls='cal-day';
+    if(date<today) cls+=' past';
+    else{
+      const ds=dateStr(date);
+      const cur=calMode==='from'?document.getElementById('date_from').value:document.getElementById('date_to').value;
+      if(cur===ds) cls+=' selected';
+      if(dateStr(date)===dateStr(today)) cls+=' today';
+      el.onclick=()=>pickDate(ds);
     }
-    el.className = cls;
+    el.className=cls;
     grid.appendChild(el);
   }
 }
-
-function dateStr(d) { return d.toISOString().split('T')[0]; }
-function fmtDate(s) { if(!s)return'—'; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }
-
-function pickDate(ds) {
-  if(!dateFrom || (dateFrom && dateTo)) { dateFrom=ds; dateTo=null; }
-  else if(ds < dateFrom) { dateTo=dateFrom; dateFrom=ds; }
-  else { dateTo=ds; }
-  document.getElementById('displayFrom').textContent = fmtDate(dateFrom);
-  document.getElementById('displayTo').textContent   = fmtDate(dateTo);
-  document.getElementById('btnStep4').disabled = !(dateFrom && dateTo);
+function dateStr(d){return d.toISOString().split('T')[0];}
+function fmtDate(s){if(!s)return'—';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;}
+function pickDate(ds){
+  if(calMode==='from'){
+    document.getElementById('date_from').value=ds;
+    document.getElementById('dateFromDisplay').value=fmtDate(ds);
+  } else {
+    document.getElementById('date_to').value=ds;
+    document.getElementById('dateToDisplay').value=fmtDate(ds);
+  }
+  checkDates();
   renderCalendar();
 }
-function prevMonth() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); }
-function nextMonth() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); }
+function checkDates(){
+  const f=document.getElementById('date_from').value;
+  const t=document.getElementById('date_to').value;
+  document.getElementById('btnStep4').disabled=!(f&&t);
+}
+function prevMonth(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
+function nextMonth(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();}
 
-// ── Step Navigation ───────────────────────────────────────────────────────────
-function goStep(n) {
-  if(n===2){ buildTramiteList(); }
-  if(n===3){ buildOfficeList(); }
-  if(n===6){ if(!validateForm()) return; buildSummary(); }
+// ── Nationality ───────────────────────────────────────────────────────────────
+function buildNatList(filter=''){
+  const list=document.getElementById('natList');
+  const current=document.getElementById('nacionalidad').value;
+  list.innerHTML='';
+  // Add "Seleccionar" at top
+  const sel=document.createElement('div');
+  sel.className='nat-item'+(current===''?' selected':'');
+  sel.innerHTML=`<span>Seleccionar</span><div class="nat-radio"></div>`;
+  sel.onclick=()=>{setNat('');};
+  list.appendChild(sel);
+  PAISES.filter(p=>normStr(p).includes(normStr(filter))).forEach(p=>{
+    const item=document.createElement('div');
+    item.className='nat-item'+(current===p?' selected':'');
+    item.innerHTML=`<span>${p}</span><div class="nat-radio"></div>`;
+    item.onclick=()=>setNat(p);
+    list.appendChild(item);
+  });
+}
+function setNat(val){
+  document.getElementById('nacionalidad').value=val;
+  document.getElementById('nacionalidadDisplay').value=val||'Seleccionar';
+  document.getElementById('natOverlay').classList.remove('open');
+}
+function openNat(){
+  document.getElementById('natSearch').value='';
+  buildNatList();
+  document.getElementById('natOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('natSearch').focus(),100);
+}
+function closeNat(e){
+  if(e.target===document.getElementById('natOverlay'))
+    document.getElementById('natOverlay').classList.remove('open');
+}
+function filterNat(){buildNatList(document.getElementById('natSearch').value);}
 
+// ── Doc Type ──────────────────────────────────────────────────────────────────
+function selectDoc(type){
+  document.getElementById('doc_type').value=type;
+  ['NIE','PAS','DNI'].forEach(t=>{
+    document.getElementById('doc'+t).classList.toggle('selected',
+      (t==='PAS'?'PASAPORTE':t)===type);
+  });
+}
+
+// ── Certificate ───────────────────────────────────────────────────────────────
+let certBase64='';
+function certSelected(){
+  const file=document.getElementById('certFile').files[0];
+  if(!file) return;
+  const info=document.getElementById('certInfo');
+  info.style.display='block';
+  info.textContent=`📜 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+  document.getElementById('certPassword').style.display='block';
+  const reader=new FileReader();
+  reader.onload=e=>{ certBase64=e.target.result.split(',')[1]||''; };
+  reader.readAsDataURL(file);
+}
+
+// ── Step Nav ──────────────────────────────────────────────────────────────────
+function goStep(n){
+  if(n===2) buildTramiteList();
+  if(n===3) buildOfficeList();
+  if(n===6){if(!validateForm()) return; buildSummary();}
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.getElementById('step'+n).classList.add('active');
-
   document.querySelectorAll('.step-dot').forEach((d,i)=>{
     d.classList.remove('active','done');
     if(i+1===n) d.classList.add('active');
@@ -1477,139 +523,125 @@ function goStep(n) {
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
-function validateForm() {
-  let ok = true;
-  const required = ['nombre','nie','fecha_nac','email','telefono','telegram_id'];
-  required.forEach(id => {
-    const el = document.getElementById(id);
-    const err = document.getElementById('err_'+id);
-    if(!el.value.trim()) {
-      el.classList.add('error');
-      if(err) err.classList.add('show');
-      ok = false;
-    } else {
-      el.classList.remove('error');
-      if(err) err.classList.remove('show');
-    }
-  });
-  const email = document.getElementById('email').value;
-  if(email && !/^[\w.-]+@[\w.-]+\.\w+$/.test(email)) {
+function validateForm(){
+  let ok=true;
+  const chk=(id,errId,test)=>{
+    const el=document.getElementById(id);
+    const err=document.getElementById(errId);
+    const valid=test(el.value.trim());
+    el.classList.toggle('error',!valid);
+    if(err) err.classList.toggle('show',!valid);
+    if(!valid) ok=false;
+  };
+  chk('nie','err_nie',v=>v.length>3);
+  chk('nombre','err_nombre',v=>v.length>1);
+  chk('fecha_nac','err_fecha',v=>v>=1940&&v<=2010);
+  chk('nacionalidad','err_nac',v=>v.length>0);
+  chk('telefono','err_tel',v=>v.length>=7);
+  chk('telegram_id','err_tid',v=>v.length>3);
+  const email=document.getElementById('email').value.trim();
+  if(email&&!/^[\w.-]+@[\w.-]+\.\w+$/.test(email)){
     document.getElementById('email').classList.add('error');
     document.getElementById('err_email').classList.add('show');
-    ok = false;
+    ok=false;
   }
   return ok;
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────
-function buildSummary() {
-  const p = PROVINCIAS[selectedProvince];
-  const rows = [
-    ['🗺️','Provincia', p.name],
-    ['📋','Trámite', p.tramites[selectedTramite]],
-    ['🏢','Oficina', selectedOffice === 'ANY' ? '🌐 Cualquier oficina disponible' : (p.oficinas[parseInt(selectedOffice)] || p.oficinas[selectedOffice] || '🌐 Cualquier oficina')],
-    ['📅','Buscar desde', fmtDate(dateFrom)],
-    ['📅','Buscar hasta', fmtDate(dateTo)],
-    ['👤','Nombre', document.getElementById('nombre').value+' '+document.getElementById('apellido').value],
-    ['🪪','NIE/Pasaporte', document.getElementById('nie').value.toUpperCase()],
-    ['🎂','Fecha Nac.', document.getElementById('fecha_nac').value],
-    ['🌍','Nacionalidad', document.getElementById('nacionalidad').value],
-    ['📧','Email', document.getElementById('email').value],
-    ['📞','Teléfono', document.getElementById('telefono').value],
+function buildSummary(){
+  const p=PROVINCIAS[selectedProvince];
+  let oficina='';
+  if(selectedOfficeIdx==='ANY') oficina='🌐 Cualquier oficina disponible';
+  else if(typeof selectedOfficeIdx==='number') oficina=p.oficinas[selectedOfficeIdx]||'—';
+
+  const rows=[
+    ['🗺️','Provincia',p.name],
+    ['📋','Trámite',p.tramites[selectedTramite]||'—'],
+    ['🏢','Oficina',oficina],
+    ['📅','Fecha mín.',fmtDate(document.getElementById('date_from').value)],
+    ['📅','Fecha máx.',fmtDate(document.getElementById('date_to').value)],
+    ['📄','Tipo doc.',document.getElementById('doc_type').value],
+    ['🪪','Documento',document.getElementById('nie').value.toUpperCase()],
+    ['👤','Nombre',document.getElementById('nombre').value],
+    ['🎂','Año nac.',document.getElementById('fecha_nac').value],
+    ['🌍','Nacionalidad',document.getElementById('nacionalidad').value],
+    ['📞','Teléfono',document.getElementById('telefono').value],
+    ['📧','Email',document.getElementById('email').value||'—'],
   ];
-  document.getElementById('summaryCard').innerHTML = rows.map(([icon,label,val])=>`
+  document.getElementById('summaryCard').innerHTML=rows.map(([icon,label,val])=>`
     <div class="summary-row">
       <span class="summary-icon">${icon}</span>
-      <div><div class="summary-label">${label}</div><div class="summary-val">${val}</div></div>
+      <div><div class="summary-label">${label}</div><div class="summary-val">${val||'—'}</div></div>
     </div>`).join('');
 }
 
 // ── Submit ────────────────────────────────────────────────────────────────────
-function updateFechaNac() {
-  const y = document.getElementById('dob_year').value;
-  if (y) {
-    document.getElementById('fecha_nac').value = y;
-    document.getElementById('err_fecha').classList.remove('show');
-    document.getElementById('dob_year').classList.remove('error');
-  }
-}
+async function submitBooking(){
+  const params=new URLSearchParams(window.location.search);
+  const finalPid=selectedProvince||params.get('pid');
+  const finalTid=selectedTramite||params.get('tid');
+  const finalOidx=(selectedOfficeIdx!==null&&selectedOfficeIdx!==undefined)
+    ?selectedOfficeIdx:(params.get('oidx')||'ANY');
 
-async function submitBooking() {
-  // Validate required fields
-  const requiredIds = ['nombre','nie','email','telefono','telegram_id'];
-  let valid = true;
-  requiredIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el || !el.value.trim()) {
-      if (el) el.style.border = '2px solid #e05c5c';
-      valid = false;
-    } else {
-      if (el) el.style.border = '';
-    }
-  });
-  if (!valid) { alert('⚠️ Por favor rellena todos los campos obligatorios.'); return; }
-  if (!dateFrom || !dateTo) { alert('⚠️ Selecciona el rango de fechas en el calendario.'); return; }
-  const fechaVal = document.getElementById('dob_year').value;
-  if (!fechaVal) {
-    document.getElementById('dob_year').classList.add('error');
-    document.getElementById('err_fecha').classList.add('show');
-    alert('⚠️ Selecciona tu año de nacimiento.');
-    return;
-  }
-
-  // Get URL params (pre-filled from bot)
-  const params    = new URLSearchParams(window.location.search);
-  const urlPid    = params.get('pid');
-  const urlTid    = params.get('tid');
-  const urlOidx   = params.get('oidx');
-
-  const finalPid  = selectedProvince || urlPid;
-  const finalTid  = selectedTramite  || urlTid;
-  const finalOidx = (selectedOffice !== null && selectedOffice !== undefined)
-                      ? selectedOffice
-                      : (urlOidx || 'ANY');
-
-  const payload = {
-    province_id:   finalPid,
-    tramite_id:    finalTid,
-    oficina_idx:   (finalOidx === null || finalOidx === undefined) ? 'ANY' : String(finalOidx),
-    date_from:     dateFrom,
-    date_to:       dateTo,
-    nombre:        document.getElementById('nombre').value.trim(),
-    apellido:      '',  // merged into nombre field
-    nie:           document.getElementById('nie').value.trim().toUpperCase(),
-    fecha_nac:     document.getElementById('fecha_nac').value,
-    nacionalidad:  document.getElementById('nacionalidad').value.trim(),
-    email:         document.getElementById('email').value.trim(),
-    telefono:      document.getElementById('telefono').value.trim(),
-    telegram_id:   document.getElementById('telegram_id').value.trim(),
+  const payload={
+    province_id:  finalPid,
+    tramite_id:   finalTid,
+    oficina_idx:  String(finalOidx),
+    date_from:    document.getElementById('date_from').value,
+    date_to:      document.getElementById('date_to').value,
+    doc_type:     document.getElementById('doc_type').value,
+    nie:          document.getElementById('nie').value.trim().toUpperCase(),
+    nombre:       document.getElementById('nombre').value.trim(),
+    apellido:     '',
+    fecha_nac:    document.getElementById('fecha_nac').value,
+    nacionalidad: document.getElementById('nacionalidad').value,
+    telefono:     document.getElementById('telefono').value.trim(),
+    email:        document.getElementById('email').value.trim(),
+    observaciones:document.getElementById('observaciones').value.trim(),
+    telegram_id:  document.getElementById('telegram_id').value.trim(),
+    cert_base64:  certBase64,
+    cert_password:document.getElementById('certPassword').value,
   };
 
-  // Show loading
-  const submitBtn = document.querySelector('.btn-success');
-  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Enviando...'; }
+  const btn=document.querySelector('.btn-success');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Enviando...';}
 
-  try {
-    const res = await fetch('/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (data.success) {
-      document.getElementById('bookingIdDisplay').textContent = data.booking_id;
-      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  try{
+    const res=await fetch('/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(data.success){
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
       document.getElementById('stepSuccess').classList.add('active');
-      document.querySelectorAll('.step-dot').forEach(d => d.classList.add('done'));
+      document.querySelectorAll('.step-dot').forEach(d=>d.classList.add('done'));
     } else {
-      alert('❌ Error: ' + (data.error || 'Intenta de nuevo'));
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🚀 Iniciar Búsqueda Automática'; }
+      alert('❌ Error: '+(data.error||'Intenta de nuevo'));
+      if(btn){btn.disabled=false;btn.textContent='🚀 Enviar Solicitud';}
     }
-  } catch(e) {
-    alert('❌ Error de conexión. Verifica tu conexión e intenta de nuevo.');
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '🚀 Iniciar Búsqueda Automática'; }
+  }catch(e){
+    alert('❌ Error de conexión.');
+    if(btn){btn.disabled=false;btn.textContent='🚀 Enviar Solicitud';}
   }
 }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.onload=()=>{
+  buildProvinceGrid();
+
+  const params=new URLSearchParams(window.location.search);
+  const pid=params.get('pid'), tid=params.get('tid'), oidx=params.get('oidx'), uid=params.get('uid');
+  if(uid){const el=document.getElementById('telegram_id');if(el)el.value=uid;}
+  if(pid&&PROVINCIAS[pid]){
+    selectProvince(pid);
+    if(tid&&PROVINCIAS[pid].tramites[tid]){
+      selectedTramite=tid;
+      if(oidx!==null){
+        selectedOfficeIdx=oidx==='ANY'?'ANY':parseInt(oidx);
+        setTimeout(()=>goStep(4),200);
+      } else setTimeout(()=>goStep(3),200);
+    } else setTimeout(()=>goStep(2),200);
+  }
+};
 </script>
 </body>
 </html>
