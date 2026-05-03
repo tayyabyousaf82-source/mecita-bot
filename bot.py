@@ -32,8 +32,14 @@ logger = logging.getLogger(__name__)
 # ─── Keyboards ────────────────────────────────────────────────────────────────
 
 def province_keyboard(page=0):
-    # No pagination — show all 52 provinces at once (scroll to see all)
-    provs = sorted(PROVINCIA_DATA.items(), key=lambda x: x[1]["name"])
+    # No pagination — show all 51 provinces at once (scroll to see all)
+    import unicodedata
+    def es_sort_key(item):
+        name = item[1]["name"]
+        # Normalize: á->a, é->e etc for correct Spanish A-Z ordering
+        normalized = unicodedata.normalize("NFD", name.lower())
+        return "".join(c for c in normalized if unicodedata.category(c) != "Mn")
+    provs = sorted(PROVINCIA_DATA.items(), key=es_sort_key)
     rows = []
     row = []
     for pid, pd in provs:
