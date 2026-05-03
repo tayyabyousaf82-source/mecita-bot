@@ -96,8 +96,7 @@ def summary_text(d):
         f"📌 *Trámite:* {t}\n"
         f"🏢 *Oficina:* {o}\n"
         f"📅 *Desde:* `{df}`  →  *Hasta:* `{dt}`\n\n"
-        f"👤 *Nombre:* {d['nombre']}\n"
-        f"👥 *Apellido:* {d['apellido']}\n"
+        f"👤 *Nombre completo:* {d['nombre']}\n"
         f"🪪 *NIE/Pasaporte:* `{d['nie']}`\n"
         f"🎂 *Fecha Nac:* {d['fecha_nac']}\n"
         f"🌍 *Nacionalidad:* {d['nacionalidad']}\n"
@@ -406,8 +405,9 @@ async def enter_date_to(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 # Steps 6-12 — Personal Data
 async def e_nombre(u, c):
     c.user_data["nombre"] = u.message.text.strip()
-    await u.message.reply_text("👥 Escribe tu *apellido/s*:", parse_mode="Markdown")
-    return ENTER_APELLIDO
+    c.user_data["apellido"] = ""
+    await u.message.reply_text("🪪 Escribe tu *NIE o número de pasaporte*:", parse_mode="Markdown")
+    return ENTER_NIE
 
 async def e_apellido(u, c):
     c.user_data["apellido"] = u.message.text.strip()
