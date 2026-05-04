@@ -151,6 +151,27 @@
   .office-btn.selected { border-color: var(--accent2); background: #1a3528; }
   .office-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
 
+  /* Doc Type Buttons */
+  .doc-type-btn {
+    flex: 1; padding: 10px 6px; border: 2px solid var(--border);
+    border-radius: 10px; background: var(--card2); color: var(--text);
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+  }
+  .doc-type-btn.selected { border-color: var(--accent); background: #1e3550; color: #fff; }
+  .doc-type-btn:hover { border-color: var(--accent); }
+
+  /* Sin/Con Clave */
+  .clave-btns { display: flex; gap: 10px; margin-bottom: 16px; }
+  .clave-btn {
+    flex: 1; padding: 14px 10px; border: 2px solid var(--border);
+    border-radius: 12px; background: var(--card2); color: var(--text);
+    font-size: 13px; font-weight: 600; cursor: pointer; text-align: center;
+    transition: all .2s;
+  }
+  .clave-btn.selected { border-color: var(--accent2); background: #1a3528; }
+  .clave-btn:hover { border-color: var(--accent2); }
+  .clave-badge { display: block; font-size: 20px; margin-bottom: 4px; }
+
   /* Form Fields */
   .form-group { margin-bottom: 14px; }
   .form-label {
@@ -380,6 +401,38 @@
   <button class="btn btn-primary" id="btnStep4" onclick="goStep(5)" disabled>Siguiente →</button>
 </div>
 
+<!-- STEP 4b: Sin Clave / Con Clave -->
+<div class="section" id="step4b">
+  <div class="section-title">🔐 Método de Acceso</div>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
+    ¿Cómo quieres que el bot acceda a la web de citas?
+  </p>
+  <div class="clave-btns">
+    <button type="button" class="clave-btn selected" id="btn_sinclave" onclick="selectClave('sin')">
+      <span class="clave-badge">🌐</span>
+      <strong>Sin Cl@ve</strong>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Acceso sin certificado</div>
+    </button>
+    <button type="button" class="clave-btn" id="btn_conclave" onclick="selectClave('con')">
+      <span class="clave-badge">🔐</span>
+      <strong>Con Cl@ve</strong>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Certificado digital instalado</div>
+    </button>
+  </div>
+  <div id="conclave_info" style="display:none;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;">
+    <p style="color:var(--accent);font-size:13px;font-weight:600;margin-bottom:8px;">ℹ️ Con Cl@ve — Requisitos:</p>
+    <ul style="color:var(--muted);font-size:12px;line-height:1.8;padding-left:16px;">
+      <li>Certificado digital instalado en el servidor</li>
+      <li>El bot accederá usando tu certificado</li>
+      <li>Mayor probabilidad de encontrar citas</li>
+      <li>Cuando llegue al OTP, te notificará por Telegram</li>
+    </ul>
+  </div>
+  <input type="hidden" id="access_method" value="sin"/>
+  <button class="btn btn-back" onclick="goStep(4)">← Volver</button>
+  <button class="btn btn-primary" onclick="goStep(5)">Siguiente →</button>
+</div>
+
 <!-- STEP 5: Personal Data -->
 <div class="section" id="step5">
   <div class="section-title">👤 Datos Personales</div>
@@ -391,7 +444,13 @@
     <input type="hidden" id="apellido" value=""/>
   </div>
   <div class="form-group">
-    <label class="form-label">NIE / Pasaporte *</label>
+    <label class="form-label">Tipo de Documento *</label>
+    <div style="display:flex;gap:8px;margin-bottom:10px;" id="docTypeBtns">
+      <button type="button" class="doc-type-btn selected" id="btn_nie" onclick="selectDocType('NIE')">🪪 NIE</button>
+      <button type="button" class="doc-type-btn" id="btn_dni" onclick="selectDocType('DNI')">🪪 DNI</button>
+      <button type="button" class="doc-type-btn" id="btn_pas" onclick="selectDocType('PASAPORTE')">📘 Pasaporte</button>
+    </div>
+    <input type="hidden" id="doc_type" value="NIE"/>
     <input class="form-input" id="nie" type="text" placeholder="Ej: X1234567A"/>
     <div class="error-msg" id="err_nie">Formato inválido</div>
   </div>
@@ -2518,18 +2577,87 @@ function nextMonth() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} render
 function goStep(n) {
   if(n===2){ buildTramiteList(); }
   if(n===3){ buildOfficeList(); }
+  if(n==='4b'){ /* clave step */ }
   if(n===6){ if(!validateForm()) return; buildSummary(); }
 
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.getElementById('step'+n).classList.add('active');
+  const stepId = n==='4b' ? 'step4b' : 'step'+n;
+  document.getElementById(stepId).classList.add('active');
 
+  const stepNum = n==='4b' ? 4 : n;
   document.querySelectorAll('.step-dot').forEach((d,i)=>{
     d.classList.remove('active','done');
-    if(i+1===n) d.classList.add('active');
-    else if(i+1<n) d.classList.add('done');
+    if(i+1===stepNum) d.classList.add('active');
+    else if(i+1<stepNum) d.classList.add('done');
   });
   window.scrollTo(0,0);
 }
+
+// Update step4 next button to go to 4b
+document.addEventListener('DOMContentLoaded', ()=>{
+  const btn4 = document.getElementById('btnStep4');
+  if(btn4) btn4.onclick = ()=>goStep('4b');
+});
+
+// ── Doc Type ──────────────────────────────────────────────────────────────────
+function selectDocType(type) {
+  document.getElementById('doc_type').value = type;
+  ['NIE','DNI','PASAPORTE'].forEach(t=>{
+    const btnId = 'btn_' + t.toLowerCase().replace('pasaporte','pas');
+    const btn = document.getElementById(btnId);
+    if(btn) btn.classList.toggle('selected', t===type);
+  });
+  const nieInput = document.getElementById('nie');
+  if(type==='NIE') nieInput.placeholder = 'Ej: X1234567A';
+  else if(type==='DNI') nieInput.placeholder = 'Ej: 12345678Z';
+  else nieInput.placeholder = 'Ej: AB123456';
+}
+
+// ── Sin/Con Clave ─────────────────────────────────────────────────────────────
+function selectClave(type) {
+  document.getElementById('access_method').value = type;
+  document.getElementById('btn_sinclave').classList.toggle('selected', type==='sin');
+  document.getElementById('btn_conclave').classList.toggle('selected', type==='con');
+  document.getElementById('conclave_info').style.display = type==='con' ? 'block' : 'none';
+}
+
+// ── Smart Paste ───────────────────────────────────────────────────────────────
+// When user pastes in NIE field, detect and auto-fill
+document.addEventListener('DOMContentLoaded', ()=>{
+  const nieInput = document.getElementById('nie');
+  if(nieInput) {
+    nieInput.addEventListener('paste', (e)=>{
+      setTimeout(()=>{
+        const val = nieInput.value.trim().toUpperCase();
+        // Detect doc type from format
+        if(/^[XYZ]\d{7}[A-Z]$/.test(val)) {
+          selectDocType('NIE');
+        } else if(/^\d{8}[A-Z]$/.test(val)) {
+          selectDocType('DNI');
+        } else if(/^[A-Z]{1,2}\d{6,7}$/.test(val)) {
+          selectDocType('PASAPORTE');
+        }
+      }, 50);
+    });
+  }
+
+  // Smart paste in nombre — detect if it looks like a NIE and redirect
+  const nombreInput = document.getElementById('nombre');
+  if(nombreInput) {
+    nombreInput.addEventListener('paste', (e)=>{
+      setTimeout(()=>{
+        const val = nombreInput.value.trim().toUpperCase();
+        // If user pasted NIE in nombre field by mistake
+        if(/^[XYZ]\d{7}[A-Z]$/.test(val) || /^\d{8}[A-Z]$/.test(val)) {
+          document.getElementById('nie').value = val;
+          nombreInput.value = '';
+          selectDocType(/^[XYZ]\d{7}[A-Z]$/.test(val) ? 'NIE' : 'DNI');
+          document.getElementById('nie').focus();
+        }
+      }, 50);
+    });
+  }
+});
 
 // ── Validation ────────────────────────────────────────────────────────────────
 function validateForm() {
@@ -2630,8 +2758,10 @@ async function submitBooking() {
     oficina_idx:   (finalOidx === null || finalOidx === undefined) ? 'ANY' : String(finalOidx),
     date_from:     dateFrom,
     date_to:       dateTo,
+    doc_type:      document.getElementById('doc_type').value || 'NIE',
+    access_method: document.getElementById('access_method').value || 'sin',
     nombre:        document.getElementById('nombre').value.trim(),
-    apellido:      '',  // merged into nombre field
+    apellido:      '',
     nie:           document.getElementById('nie').value.trim().toUpperCase(),
     fecha_nac:     document.getElementById('fecha_nac').value,
     nacionalidad:  document.getElementById('nacionalidad').value.trim(),
