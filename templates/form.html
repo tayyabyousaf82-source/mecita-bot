@@ -151,27 +151,25 @@
   .office-btn.selected { border-color: var(--accent2); background: #1a3528; }
   .office-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
 
-  /* Doc Type Buttons */
+  /* Doc Type */
+  .doc-type-row { display:flex; gap:8px; margin-bottom:10px; }
   .doc-type-btn {
-    flex: 1; padding: 10px 6px; border: 2px solid var(--border);
-    border-radius: 10px; background: var(--card2); color: var(--text);
-    font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+    flex:1; padding:10px 4px; border:2px solid var(--border);
+    border-radius:10px; background:var(--card2); color:var(--text);
+    font-size:13px; font-weight:600; cursor:pointer; text-align:center;
+    transition:all .15s;
   }
-  .doc-type-btn.selected { border-color: var(--accent); background: #1e3550; color: #fff; }
-  .doc-type-btn:hover { border-color: var(--accent); }
-
-  /* Sin/Con Clave */
-  .clave-btns { display: flex; gap: 10px; margin-bottom: 16px; }
+  .doc-type-btn.sel { border-color:var(--accent); background:#1e3550; }
+  /* Clave */
+  .clave-row { display:flex; gap:10px; margin-bottom:14px; }
   .clave-btn {
-    flex: 1; padding: 14px 10px; border: 2px solid var(--border);
-    border-radius: 12px; background: var(--card2); color: var(--text);
-    font-size: 13px; font-weight: 600; cursor: pointer; text-align: center;
-    transition: all .2s;
+    flex:1; padding:14px 8px; border:2px solid var(--border);
+    border-radius:12px; background:var(--card2); color:var(--text);
+    font-size:13px; font-weight:600; cursor:pointer; text-align:center;
+    transition:all .2s;
   }
-  .clave-btn.selected { border-color: var(--accent2); background: #1a3528; }
-  .clave-btn:hover { border-color: var(--accent2); }
-  .clave-badge { display: block; font-size: 20px; margin-bottom: 4px; }
-
+  .clave-btn.sel { border-color:var(--accent2); background:#1a3528; }
+  .clave-icon { font-size:22px; display:block; margin-bottom:4px; }
   /* Form Fields */
   .form-group { margin-bottom: 14px; }
   .form-label {
@@ -401,32 +399,25 @@
   <button class="btn btn-primary" id="btnStep4" onclick="goStep(5)" disabled>Siguiente →</button>
 </div>
 
-<!-- STEP 4b: Sin Clave / Con Clave -->
+<!-- STEP 4b: Método de acceso -->
 <div class="section" id="step4b">
   <div class="section-title">🔐 Método de Acceso</div>
-  <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
-    ¿Cómo quieres que el bot acceda a la web de citas?
-  </p>
-  <div class="clave-btns">
-    <button type="button" class="clave-btn selected" id="btn_sinclave" onclick="selectClave('sin')">
-      <span class="clave-badge">🌐</span>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">¿Con qué método accederá el bot?</p>
+  <div class="clave-row">
+    <button type="button" class="clave-btn sel" id="btn_sin" onclick="setClave('sin')">
+      <span class="clave-icon">🌐</span>
       <strong>Sin Cl@ve</strong>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Acceso sin certificado</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Sin certificado</div>
     </button>
-    <button type="button" class="clave-btn" id="btn_conclave" onclick="selectClave('con')">
-      <span class="clave-badge">🔐</span>
+    <button type="button" class="clave-btn" id="btn_con" onclick="setClave('con')">
+      <span class="clave-icon">🔐</span>
       <strong>Con Cl@ve</strong>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Certificado digital instalado</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Certificado digital</div>
     </button>
   </div>
-  <div id="conclave_info" style="display:none;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;">
-    <p style="color:var(--accent);font-size:13px;font-weight:600;margin-bottom:8px;">ℹ️ Con Cl@ve — Requisitos:</p>
-    <ul style="color:var(--muted);font-size:12px;line-height:1.8;padding-left:16px;">
-      <li>Certificado digital instalado en el servidor</li>
-      <li>El bot accederá usando tu certificado</li>
-      <li>Mayor probabilidad de encontrar citas</li>
-      <li>Cuando llegue al OTP, te notificará por Telegram</li>
-    </ul>
+  <div id="con_info" style="display:none;background:var(--card2);border:1px solid var(--accent);border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted);">
+    ℹ️ Con Cl@ve: el bot usará certificado digital instalado en el servidor.
+    Cuando llegue al OTP, te notificará por Telegram — envía el código y el bot lo confirmará.
   </div>
   <input type="hidden" id="access_method" value="sin"/>
   <button class="btn btn-back" onclick="goStep(4)">← Volver</button>
@@ -445,13 +436,13 @@
   </div>
   <div class="form-group">
     <label class="form-label">Tipo de Documento *</label>
-    <div style="display:flex;gap:8px;margin-bottom:10px;" id="docTypeBtns">
-      <button type="button" class="doc-type-btn selected" id="btn_nie" onclick="selectDocType('NIE')">🪪 NIE</button>
-      <button type="button" class="doc-type-btn" id="btn_dni" onclick="selectDocType('DNI')">🪪 DNI</button>
-      <button type="button" class="doc-type-btn" id="btn_pas" onclick="selectDocType('PASAPORTE')">📘 Pasaporte</button>
+    <div class="doc-type-row">
+      <button type="button" class="doc-type-btn sel" id="btn_NIE"       onclick="setDoc('NIE')">🪪 NIE</button>
+      <button type="button" class="doc-type-btn"     id="btn_DNI"       onclick="setDoc('DNI')">🪪 DNI</button>
+      <button type="button" class="doc-type-btn"     id="btn_PASAPORTE" onclick="setDoc('PASAPORTE')">📘 Pasaporte</button>
     </div>
     <input type="hidden" id="doc_type" value="NIE"/>
-    <input class="form-input" id="nie" type="text" placeholder="Ej: X1234567A"/>
+    <input class="form-input" id="nie" type="text" placeholder="Ej: X1234567A" oninput="detectDocType(this.value)"/>
     <div class="error-msg" id="err_nie">Formato inválido</div>
   </div>
   <div class="form-group">
@@ -2577,87 +2568,65 @@ function nextMonth() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} render
 function goStep(n) {
   if(n===2){ buildTramiteList(); }
   if(n===3){ buildOfficeList(); }
-  if(n==='4b'){ /* clave step */ }
+  if(n==='4b'){ /* clave step, no extra logic */ }
   if(n===6){ if(!validateForm()) return; buildSummary(); }
 
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  const stepId = n==='4b' ? 'step4b' : 'step'+n;
-  document.getElementById(stepId).classList.add('active');
+  document.getElementById(n==='4b'?'step4b':'step'+n).classList.add('active');
 
-  const stepNum = n==='4b' ? 4 : n;
+  const num = n==='4b' ? 4 : n;
   document.querySelectorAll('.step-dot').forEach((d,i)=>{
     d.classList.remove('active','done');
-    if(i+1===stepNum) d.classList.add('active');
-    else if(i+1<stepNum) d.classList.add('done');
+    if(i+1===num) d.classList.add('active');
+    else if(i+1<num) d.classList.add('done');
   });
   window.scrollTo(0,0);
 }
 
-// Update step4 next button to go to 4b
-document.addEventListener('DOMContentLoaded', ()=>{
-  const btn4 = document.getElementById('btnStep4');
-  if(btn4) btn4.onclick = ()=>goStep('4b');
+// Step 4 → 4b
+document.addEventListener('DOMContentLoaded',()=>{
+  const b4 = document.getElementById('btnStep4');
+  if(b4) b4.onclick = ()=>{ if(dateFrom&&dateTo) goStep('4b'); };
+
+  // Smart paste in nombre field — if NIE pasted, redirect to nie field
+  const nomEl = document.getElementById('nombre');
+  if(nomEl){
+    nomEl.addEventListener('input',()=>{
+      const v = nomEl.value.trim().toUpperCase();
+      if(/^[XYZ]\d{7}[A-Z]$/.test(v)||/^\d{8}[A-Z]$/.test(v)){
+        document.getElementById('nie').value = v;
+        nomEl.value = '';
+        setDoc(/^\d{8}[A-Z]$/.test(v)?'DNI':'NIE');
+        document.getElementById('nie').focus();
+      }
+    });
+  }
 });
 
 // ── Doc Type ──────────────────────────────────────────────────────────────────
-function selectDocType(type) {
+function setDoc(type){
   document.getElementById('doc_type').value = type;
   ['NIE','DNI','PASAPORTE'].forEach(t=>{
-    const btnId = 'btn_' + t.toLowerCase().replace('pasaporte','pas');
-    const btn = document.getElementById(btnId);
-    if(btn) btn.classList.toggle('selected', t===type);
+    document.getElementById('btn_'+t).classList.toggle('sel', t===type);
   });
-  const nieInput = document.getElementById('nie');
-  if(type==='NIE') nieInput.placeholder = 'Ej: X1234567A';
-  else if(type==='DNI') nieInput.placeholder = 'Ej: 12345678Z';
-  else nieInput.placeholder = 'Ej: AB123456';
+  const ph = {'NIE':'Ej: X1234567A','DNI':'Ej: 12345678Z','PASAPORTE':'Ej: AB1234567'};
+  document.getElementById('nie').placeholder = ph[type]||'Número de documento';
+}
+
+function detectDocType(val){
+  val = val.trim().toUpperCase();
+  if(/^[XYZ]\d{7}[A-Z]?$/.test(val)) setDoc('NIE');
+  else if(/^\d{7,8}[A-Z]?$/.test(val)) setDoc('DNI');
+  else if(/^[A-Z]{1,2}\d{6,8}$/.test(val)) setDoc('PASAPORTE');
 }
 
 // ── Sin/Con Clave ─────────────────────────────────────────────────────────────
-function selectClave(type) {
+function setClave(type){
   document.getElementById('access_method').value = type;
-  document.getElementById('btn_sinclave').classList.toggle('selected', type==='sin');
-  document.getElementById('btn_conclave').classList.toggle('selected', type==='con');
-  document.getElementById('conclave_info').style.display = type==='con' ? 'block' : 'none';
+  document.getElementById('btn_sin').classList.toggle('sel', type==='sin');
+  document.getElementById('btn_con').classList.toggle('sel', type==='con');
+  document.getElementById('con_info').style.display = type==='con'?'block':'none';
 }
-
-// ── Smart Paste ───────────────────────────────────────────────────────────────
-// When user pastes in NIE field, detect and auto-fill
-document.addEventListener('DOMContentLoaded', ()=>{
-  const nieInput = document.getElementById('nie');
-  if(nieInput) {
-    nieInput.addEventListener('paste', (e)=>{
-      setTimeout(()=>{
-        const val = nieInput.value.trim().toUpperCase();
-        // Detect doc type from format
-        if(/^[XYZ]\d{7}[A-Z]$/.test(val)) {
-          selectDocType('NIE');
-        } else if(/^\d{8}[A-Z]$/.test(val)) {
-          selectDocType('DNI');
-        } else if(/^[A-Z]{1,2}\d{6,7}$/.test(val)) {
-          selectDocType('PASAPORTE');
-        }
-      }, 50);
-    });
-  }
-
-  // Smart paste in nombre — detect if it looks like a NIE and redirect
-  const nombreInput = document.getElementById('nombre');
-  if(nombreInput) {
-    nombreInput.addEventListener('paste', (e)=>{
-      setTimeout(()=>{
-        const val = nombreInput.value.trim().toUpperCase();
-        // If user pasted NIE in nombre field by mistake
-        if(/^[XYZ]\d{7}[A-Z]$/.test(val) || /^\d{8}[A-Z]$/.test(val)) {
-          document.getElementById('nie').value = val;
-          nombreInput.value = '';
-          selectDocType(/^[XYZ]\d{7}[A-Z]$/.test(val) ? 'NIE' : 'DNI');
-          document.getElementById('nie').focus();
-        }
-      }, 50);
-    });
-  }
-});
 
 // ── Validation ────────────────────────────────────────────────────────────────
 function validateForm() {
@@ -2755,11 +2724,11 @@ async function submitBooking() {
   const payload = {
     province_id:   finalPid,
     tramite_id:    String(finalTid),
-    oficina_idx:   (finalOidx === null || finalOidx === undefined) ? 'ANY' : String(finalOidx),
+    oficina_idx:   (finalOidx===null||finalOidx===undefined)?'ANY':String(finalOidx),
     date_from:     dateFrom,
     date_to:       dateTo,
-    doc_type:      document.getElementById('doc_type').value || 'NIE',
-    access_method: document.getElementById('access_method').value || 'sin',
+    doc_type:      document.getElementById('doc_type')?.value||'NIE',
+    access_method: document.getElementById('access_method')?.value||'sin',
     nombre:        document.getElementById('nombre').value.trim(),
     apellido:      '',
     nie:           document.getElementById('nie').value.trim().toUpperCase(),
@@ -2768,6 +2737,9 @@ async function submitBooking() {
     email:         document.getElementById('email').value.trim(),
     telefono:      document.getElementById('telefono').value.trim(),
     telegram_id:   document.getElementById('telegram_id').value.trim(),
+    province_name: PROVINCIAS[finalPid]?.name||'',
+    tramite_name:  PROVINCIAS[finalPid]?.tramites[finalTid]||'',
+    oficina_name:  finalOidx==='ANY'?'Cualquier oficina':(PROVINCIAS[finalPid]?.oficinas[parseInt(finalOidx)]||''),
   };
 
   // Show loading
