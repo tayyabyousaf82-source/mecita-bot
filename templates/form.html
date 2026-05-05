@@ -92,10 +92,10 @@
     background: var(--card2);
     border: 2px solid transparent;
     border-radius: 10px;
-    padding: 12px 6px;
+    padding: 14px 6px;
     color: var(--text);
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
     cursor: pointer;
     text-align: center;
     transition: all .15s;
@@ -476,7 +476,7 @@
   <div class="section-title">🗺️ Selecciona la Provincia</div>
   <input class="search-box" type="text" placeholder="🔍  Buscar provincia..." id="provSearch" oninput="filterProvinces()"/>
   <div class="prov-grid" id="provGrid"></div>
-  <button class="btn btn-primary" id="btnStep1" onclick="goStep(2)" disabled>Siguiente →</button>
+  <button class="btn btn-primary" id="btnStep1" onclick="if(selectedProvince) goStep(2)" disabled>Siguiente →</button>
 </div>
 
 <!-- STEP 2: Tramite -->
@@ -2700,7 +2700,8 @@ function filterProvinces() { buildProvinceGrid(document.getElementById('provSear
 function selectProvince(id) {
   selectedProvince = id; selectedTramite = null; selectedOffice = null;
   buildProvinceGrid(document.getElementById('provSearch').value);
-  document.getElementById('btnStep1').disabled = false;
+  const btn1 = document.getElementById('btnStep1');
+  if (btn1) btn1.disabled = false;
 }
 
 // ── Tramite ─────────────────────────────────────────────────────────────────
@@ -2876,9 +2877,13 @@ function goStep(n) {
     else if (i + 1 < num) d.classList.add('done');
   });
 
-  // Dark/light body bg
-  if (n === 5) document.body.style.background = '#fff';
-  else         document.body.style.background = '';
+  // Step 5: full white ICP mode — hide dark header & progress
+  const isIcp = (n === 5);
+  document.body.style.background = isIcp ? '#fff' : '';
+  const header = document.querySelector('.header');
+  const progress = document.querySelector('.progress-wrap');
+  if (header)   header.style.display   = isIcp ? 'none' : '';
+  if (progress) progress.style.display = isIcp ? 'none' : '';
 
   window.scrollTo(0, 0);
 }
@@ -3025,6 +3030,10 @@ async function submitBooking() {
       document.getElementById('stepSuccess').classList.add('active');
       document.querySelectorAll('.step-dot').forEach(d => d.classList.add('done'));
       document.body.style.background = '';
+      const hdr = document.querySelector('.header');
+      const prg = document.querySelector('.progress-wrap');
+      if (hdr) hdr.style.display = '';
+      if (prg) prg.style.display = '';
     } else {
       alert('❌ Error: ' + (data.error || 'Intenta de nuevo'));
       if (btn) { btn.disabled = false; btn.textContent = 'Enviar solicitud →'; }
