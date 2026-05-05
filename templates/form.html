@@ -1,1 +1,3056 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MiCitaBot — Reservar Cita</title>
+<style>
+  :root {
+    --bg: #0f1923;
+    --card: #1a2535;
+    --card2: #212f42;
+    --accent: #4e9de0;
+    --accent2: #3bc67e;
+    --danger: #e05c5c;
+    --text: #dde6f0;
+    --muted: #7a94b0;
+    --border: #2a3d55;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
 
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #1a2d47, #0f1f35);
+    padding: 24px 20px 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 { font-size: 22px; color: #fff; }
+  .header p  { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  /* ── Progress ── */
+  .progress-wrap {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 18px 20px 0;
+  }
+  .step-dot {
+    width: 32px; height: 4px;
+    border-radius: 4px;
+    background: var(--border);
+    transition: background .3s;
+  }
+  .step-dot.active { background: var(--accent); }
+  .step-dot.done   { background: var(--accent2); }
+
+  /* ── Sections ── */
+  .section {
+    display: none;
+    padding: 20px 16px 0;
+    animation: fadeIn .25s ease;
+  }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── Province Grid ── */
+  .search-box {
+    width: 100%;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 10px 16px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    margin-bottom: 12px;
+  }
+  .prov-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .prov-btn {
+    background: var(--card2);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 14px 6px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    transition: all .15s;
+    word-break: break-word;
+    width: 100%;
+  }
+  .prov-btn:hover   { border-color: var(--accent); }
+  .prov-btn.selected { border-color: var(--accent); background: #1e3550; color: #fff; }
+
+  /* ── Tramite ── */
+  .tramite-list { display: flex; flex-direction: column; gap: 8px; }
+  .tramite-btn {
+    background: var(--card2);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 13px 14px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all .15s;
+  }
+  .tramite-btn:hover    { border-color: var(--accent); }
+  .tramite-btn.selected { border-color: var(--accent); background: #1e3550; }
+  .tramite-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+  /* ── Office List ── */
+  .office-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
+  .office-btn {
+    background: var(--card2);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    transition: all .15s;
+  }
+  .office-btn:hover    { border-color: var(--accent2); }
+  .office-btn.selected { border-color: var(--accent2); background: #1a3528; }
+  .office-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Calendar ── */
+  .calendar-wrap {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .cal-title { font-weight: 700; font-size: 15px; }
+  .cal-nav {
+    background: var(--card);
+    border: none;
+    color: var(--accent);
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 8px;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+  .cal-day-name { text-align:center; font-size:10px; color:var(--muted); padding:4px 0; font-weight:600; }
+  .cal-day {
+    text-align:center; padding:7px 2px; border-radius:8px;
+    font-size:13px; cursor:pointer; transition:all .15s; border:1px solid transparent;
+  }
+  .cal-day:hover:not(.empty):not(.past) { background:var(--card); border-color:var(--accent); }
+  .cal-day.empty  { cursor:default; }
+  .cal-day.past   { color:var(--border); cursor:default; }
+  .cal-day.start  { background:var(--accent); color:#fff; border-radius:8px 0 0 8px; }
+  .cal-day.end    { background:var(--accent); color:#fff; border-radius:0 8px 8px 0; }
+  .cal-day.in-range { background:#1e3550; color:var(--text); border-radius:0; }
+  .cal-day.start.end { border-radius:8px; }
+  .cal-day.today  { border-color:var(--accent2); color:var(--accent2); font-weight:700; }
+  .date-range-display { display:flex; gap:8px; margin-top:10px; }
+  .date-chip {
+    flex:1; background:var(--card); border-radius:8px;
+    padding:8px 10px; font-size:12px; color:var(--muted); text-align:center;
+  }
+  .date-chip span { display:block; color:var(--text); font-weight:600; font-size:13px; margin-top:2px; }
+
+  /* ── Clave Step ── */
+  .clave-row { display:flex; gap:10px; margin-bottom:14px; }
+  .clave-btn {
+    flex:1; padding:14px 8px; border:2px solid var(--border);
+    border-radius:12px; background:var(--card2); color:var(--text);
+    font-size:13px; font-weight:600; cursor:pointer; text-align:center; transition:all .2s;
+  }
+  .clave-btn.sel { border-color:var(--accent2); background:#1a3528; }
+  .clave-icon { font-size:22px; display:block; margin-bottom:4px; }
+
+  /* ── Buttons ── */
+  .btn {
+    width:100%; padding:14px; border:none; border-radius:12px;
+    font-size:15px; font-weight:700; cursor:pointer; transition:all .15s; margin-top:8px;
+  }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { background:#3d8fd4; }
+  .btn-success { background:var(--accent2); color:#fff; }
+  .btn-back { background:var(--card2); color:var(--muted); margin-top:10px; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+
+  /* ── Summary ── */
+  .summary-card { background:var(--card2); border-radius:var(--radius); padding:16px; margin-bottom:14px; }
+  .summary-row {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:8px 0; border-bottom:1px solid var(--border); font-size:13px;
+  }
+  .summary-row:last-child { border-bottom:none; }
+  .summary-icon { font-size:16px; flex-shrink:0; }
+  .summary-label { color:var(--muted); font-size:11px; }
+  .summary-val   { font-weight:600; }
+
+  /* ── Success ── */
+  .success-screen { text-align:center; padding:40px 20px; }
+  .success-icon  { font-size:64px; margin-bottom:16px; }
+  .success-title { font-size:22px; font-weight:700; color:var(--accent2); }
+  .success-sub   { color:var(--muted); margin-top:8px; font-size:14px; }
+  .booking-id {
+    background:var(--card2); border-radius:10px; padding:12px; margin:16px 0;
+    font-family:monospace; font-size:18px; letter-spacing:2px; color:var(--accent);
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+  /* ════════════════════════════════════════
+     ICP CLAVE STEP (step5) — white style
+  ════════════════════════════════════════ */
+  #step5 {
+    background: #fff;
+    color: #222;
+    padding: 0 0 60px;
+    min-height: 100vh;
+  }
+  #step5 .icp-header {
+    background: #fff;
+    padding: 16px 16px 0;
+  }
+  #step5 .icp-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 14px;
+  }
+  /* Office multi-select box */
+  #step5 .icp-section-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    padding: 12px 16px 6px;
+    background: #fff;
+  }
+  #step5 .office-multi-box {
+    border: 1px solid #ddd;
+    border-radius: 0;
+    background: #fff;
+    overflow: hidden;
+  }
+  #step5 .office-multi-item {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #222;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background .1s;
+  }
+  #step5 .office-multi-item:last-child { border-bottom: none; }
+  #step5 .office-multi-item.selected  { background: #e8f0fe; }
+  #step5 .office-multi-item .tick {
+    color: #1a73e8; font-size: 16px; font-weight: 700; display: none;
+  }
+  #step5 .office-multi-item.selected .tick { display: inline; }
+  /* Form fields section */
+  #step5 .fields-section {
+    padding: 0 16px 16px;
+    background: #fff;
+  }
+  #step5 .fields-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin: 16px 0 10px;
+  }
+  #step5 .fields-section-title .req { color: #d32f2f; }
+  /* Radio group */
+  #step5 .radio-group { margin-bottom: 8px; }
+  #step5 .radio-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 15px;
+    color: #222;
+    cursor: pointer;
+  }
+  #step5 .radio-item input[type=radio] {
+    accent-color: #1a73e8;
+    width: 20px; height: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  /* Input underline style */
+  #step5 .field-group { margin-bottom: 4px; }
+  #step5 .field-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 2px;
+    display: block;
+  }
+  #step5 .field-label .req { color: #d32f2f; }
+  #step5 .field-sub {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 4px;
+  }
+  #step5 .field-input {
+    width: 100%;
+    border: none;
+    border-bottom: 1.5px solid #ccc;
+    padding: 8px 0 6px;
+    font-size: 15px;
+    color: #222;
+    background: transparent;
+    outline: none;
+    transition: border-color .2s;
+  }
+  #step5 .field-input:focus  { border-bottom-color: #1a73e8; }
+  #step5 .field-input.err    { border-bottom-color: #d32f2f; }
+  #step5 .field-error {
+    color: #d32f2f;
+    font-size: 12px;
+    margin-top: 2px;
+    display: none;
+  }
+  #step5 .field-error.show { display: block; }
+  /* Date field with calendar icon */
+  #step5 .date-wrap {
+    display: flex;
+    align-items: center;
+    border-bottom: 1.5px solid #ccc;
+    padding: 6px 0;
+    gap: 8px;
+    font-size: 15px;
+    color: #222;
+    cursor: pointer;
+  }
+  #step5 .date-wrap input[type=date] {
+    border: none; outline: none; font-size: 15px;
+    color: #222; background: transparent; flex: 1;
+    cursor: pointer;
+  }
+  /* Exclusion calendar */
+  #step5 .excl-cal {
+    border: 1px solid #e0e0e0;
+    border-radius: 0;
+    padding: 12px 8px;
+    background: #fff;
+    margin-top: 6px;
+  }
+  #step5 .excl-cal-title {
+    font-weight: 700;
+    font-size: 15px;
+    text-align: center;
+    color: #222;
+    margin-bottom: 8px;
+  }
+  #step5 .excl-grid {
+    display: grid;
+    grid-template-columns: repeat(7,1fr);
+    gap: 2px;
+  }
+  #step5 .excl-dname {
+    text-align: center; font-size: 11px; color: #888;
+    padding: 4px 0; font-weight: 600;
+  }
+  #step5 .excl-day {
+    text-align: center; padding: 8px 2px;
+    font-size: 13px; cursor: pointer; color: #222;
+    border-radius: 50%;
+  }
+  #step5 .excl-day.empty { cursor: default; }
+  #step5 .excl-day.past  { color: #ccc; cursor: default; }
+  #step5 .excl-day.excl  { background: #1a73e8; color: #fff; border-radius: 50%; }
+  /* Buttons */
+  #step5 .btn-cert {
+    width: 100%;
+    padding: 14px;
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 20px;
+    letter-spacing: .3px;
+  }
+  #step5 .btn-send {
+    width: 100%;
+    padding: 14px;
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #step5 .btn-back-icp {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    color: #555;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  #step5 .select-pais {
+    width: 100%;
+    border: none;
+    border-bottom: 1.5px solid #ccc;
+    padding: 8px 0 6px;
+    font-size: 15px;
+    color: #222;
+    background: transparent;
+    outline: none;
+    appearance: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🤖 MiCitaBot</h1>
+  <p>Reserva tu cita de Extranjería automáticamente</p>
+</div>
+
+<!-- Progress -->
+<div class="progress-wrap">
+  <div class="step-dot active" id="dot1"></div>
+  <div class="step-dot" id="dot2"></div>
+  <div class="step-dot" id="dot3"></div>
+  <div class="step-dot" id="dot4"></div>
+  <div class="step-dot" id="dot5"></div>
+  <div class="step-dot" id="dot6"></div>
+</div>
+
+<!-- STEP 1: Province -->
+<div class="section active" id="step1">
+  <div class="section-title">🗺️ Selecciona la Provincia</div>
+  <input class="search-box" type="text" placeholder="🔍  Buscar provincia..." id="provSearch" oninput="filterProvinces()"/>
+  <div class="prov-grid" id="provGrid"></div>
+  <button class="btn btn-primary" id="btnStep1" onclick="if(selectedProvince) goStep(2)" disabled>Siguiente →</button>
+</div>
+
+<!-- STEP 2: Tramite -->
+<div class="section" id="step2">
+  <div class="section-title">📋 Selecciona el Trámite</div>
+  <div class="tramite-list" id="tramiteList"></div>
+  <button class="btn btn-back" onclick="goStep(1)">← Volver</button>
+  <button class="btn btn-primary" id="btnStep2" onclick="goStep(3)" disabled>Siguiente →</button>
+</div>
+
+<!-- STEP 3: Office -->
+<div class="section" id="step3">
+  <div class="section-title">🏢 Selecciona la Oficina</div>
+  <div class="office-list" id="officeList"></div>
+  <button class="btn btn-back" onclick="goStep(2)">← Volver</button>
+  <button class="btn btn-primary" id="btnStep3" onclick="setDefaultDatesAndContinue()" disabled>Siguiente →</button>
+</div>
+
+<!-- STEP 4: Date Range -->
+<div class="section" id="step4">
+  <div class="section-title">📅 Rango de Fechas para Buscar</div>
+  <div class="calendar-wrap">
+    <div class="cal-header">
+      <button class="cal-nav" onclick="prevMonth()">‹</button>
+      <span class="cal-title" id="calTitle"></span>
+      <button class="cal-nav" onclick="nextMonth()">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="date-range-display">
+      <div class="date-chip">Desde<span id="displayFrom">—</span></div>
+      <div class="date-chip">Hasta<span id="displayTo">—</span></div>
+    </div>
+  </div>
+  <p style="color:var(--muted);font-size:12px;text-align:center;margin-bottom:8px;">
+    ℹ️ El bot buscará citas dentro de este rango 24/7
+  </p>
+  <button class="btn btn-back" onclick="goStep(3)">← Volver</button>
+  <button class="btn btn-primary" id="btnStep4" disabled>Siguiente →</button>
+</div>
+
+<!-- STEP 4b: Clave -->
+<div class="section" id="step4b">
+  <div class="section-title">🔐 Método de Acceso</div>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">¿Con qué método accederá el bot?</p>
+  <div class="clave-row">
+    <button type="button" class="clave-btn sel" id="btn_sin" onclick="setClave('sin')">
+      <span class="clave-icon">🌐</span>
+      <strong>Sin Cl@ve</strong>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Sin certificado</div>
+    </button>
+    <button type="button" class="clave-btn" id="btn_con" onclick="setClave('con')">
+      <span class="clave-icon">🔐</span>
+      <strong>Con Cl@ve</strong>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">Certificado digital</div>
+    </button>
+  </div>
+  <div id="con_info" style="display:none;background:var(--card2);border:1px solid var(--accent);border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted);">
+    ℹ️ Con Cl@ve: el bot usará certificado digital instalado en el servidor. Cuando llegue al OTP, te notificará por Telegram.
+  </div>
+  <input type="hidden" id="access_method" value="sin"/>
+  <button class="btn btn-back" onclick="goStep(3)">← Volver</button>
+  <button class="btn btn-primary" onclick="goStep(5)">Siguiente →</button>
+</div>
+
+<!-- STEP 5: ICP Clave Style Form -->
+<div class="section" id="step5">
+  <div class="icp-header">
+    <div class="icp-title">Formulario ICP Clave</div>
+  </div>
+
+  <!-- Office multi-select -->
+  <div class="icp-section-label">Selecciona la(s) oficina(s)</div>
+  <div class="office-multi-box" id="icpOfficeBox"></div>
+
+  <!-- Personal fields -->
+  <div class="fields-section">
+    <div class="fields-section-title">Rellena los campos obligatorios <span class="req">*</span></div>
+
+    <!-- Tipo de documento -->
+    <div class="field-group">
+      <label class="field-label">Tipo de documento <span class="req">*</span></label>
+      <div class="radio-group" id="icpDocGroup">
+        <label class="radio-item">
+          <input type="radio" name="icp_doc" value="NIE" checked onchange="setDoc('NIE')"> N.I.E.
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="icp_doc" value="PASAPORTE" onchange="setDoc('PASAPORTE')"> PASAPORTE
+        </label>
+        <label class="radio-item">
+          <input type="radio" name="icp_doc" value="DNI" onchange="setDoc('DNI')"> D.N.I.
+        </label>
+      </div>
+      <input type="hidden" id="doc_type" value="NIE"/>
+    </div>
+
+    <!-- Número de documento -->
+    <div class="field-group" style="margin-top:8px;">
+      <label class="field-label">Número de documento <span class="req">*</span></label>
+      <input class="field-input" id="nie" type="text" placeholder="Ej: X1234567A" oninput="detectDocType(this.value)"/>
+      <div class="field-error" id="err_nie">Introduce un documento valido</div>
+    </div>
+
+    <!-- Nombre y apellidos -->
+    <div class="field-group" style="margin-top:14px;">
+      <label class="field-label">Nombre y apellidos <span class="req">*</span></label>
+      <input class="field-input" id="nombre" type="text" placeholder=""/>
+      <div class="field-error" id="err_nombre">Campo obligatorio</div>
+      <input type="hidden" id="apellido" value=""/>
+    </div>
+
+    <!-- Año de nacimiento -->
+    <div class="field-group" style="margin-top:14px;">
+      <label class="field-label">Año de nacimiento <span class="req">*</span></label>
+      <input class="field-input" id="anio_nac" type="number" placeholder="Ej: 1990" min="1940" max="2010"/>
+      <input type="hidden" id="fecha_nac"/>
+      <div class="field-error" id="err_fecha">Introduce un año válido</div>
+    </div>
+
+    <!-- País de nacionalidad -->
+    <div class="field-group" style="margin-top:14px;">
+      <label class="field-label">País de nacionalidad <span class="req">*</span></label>
+      <select class="select-pais" id="nacionalidad">
+        <option value="">Seleccionar</option>
+        <option>Afganistán</option><option>Albania</option><option>Alemania</option>
+        <option>Angola</option><option>Argentina</option><option>Armenia</option>
+        <option>Australia</option><option>Austria</option><option>Azerbaiyán</option>
+        <option>Bangladesh</option><option>Bélgica</option><option>Bolivia</option>
+        <option>Bosnia y Herzegovina</option><option>Brasil</option><option>Bulgaria</option>
+        <option>Camerún</option><option>Canadá</option><option>Chile</option>
+        <option>China</option><option>Colombia</option><option>Congo</option>
+        <option>Corea del Sur</option><option>Costa Rica</option><option>Croacia</option>
+        <option>Cuba</option><option>Dinamarca</option><option>Ecuador</option>
+        <option>Egipto</option><option>El Salvador</option><option>Eslovaquia</option>
+        <option>Eslovenia</option><option>España</option><option>Estados Unidos</option>
+        <option>Etiopía</option><option>Filipinas</option><option>Finlandia</option>
+        <option>Francia</option><option>Georgia</option><option>Ghana</option>
+        <option>Grecia</option><option>Guatemala</option><option>Guinea</option>
+        <option>Guinea Ecuatorial</option><option>Haití</option><option>Honduras</option>
+        <option>Hungría</option><option>India</option><option>Indonesia</option>
+        <option>Irak</option><option>Irán</option><option>Irlanda</option>
+        <option>Israel</option><option>Italia</option><option>Jamaica</option>
+        <option>Japón</option><option>Jordania</option><option>Kazajistán</option>
+        <option>Kenia</option><option>Kosovo</option><option>Líbano</option>
+        <option>Libia</option><option>Lituania</option><option>Marruecos</option>
+        <option>Mauritania</option><option>México</option><option>Moldavia</option>
+        <option>Mongolia</option><option>Montenegro</option><option>Mozambique</option>
+        <option>Nepal</option><option>Nicaragua</option><option>Nigeria</option>
+        <option>Noruega</option><option>Nueva Zelanda</option><option>Países Bajos</option>
+        <option>Pakistan</option><option>Palestina</option><option>Panamá</option>
+        <option>Paraguay</option><option>Perú</option><option>Polonia</option>
+        <option>Portugal</option><option>República Dominicana</option><option>Rumania</option>
+        <option>Rusia</option><option>Senegal</option><option>Serbia</option>
+        <option>Sierra Leona</option><option>Somalia</option><option>Sri Lanka</option>
+        <option>Sudáfrica</option><option>Sudán</option><option>Suecia</option>
+        <option>Suiza</option><option>Siria</option><option>Tailandia</option>
+        <option>Tanzania</option><option>Túnez</option><option>Turquía</option>
+        <option>Ucrania</option><option>Uganda</option><option>Uruguay</option>
+        <option>Venezuela</option><option>Vietnam</option><option>Yemen</option>
+        <option>Zimbabue</option>
+      </select>
+    </div>
+
+    <!-- Teléfono -->
+    <div class="field-group" style="margin-top:14px;">
+      <label class="field-label">Teléfono <span class="req">*</span></label>
+      <input class="field-input" id="telefono" type="tel" placeholder="Ej: +34612345678"/>
+      <div class="field-error" id="err_tel">Formato inválido</div>
+    </div>
+
+    <!-- Email -->
+    <div class="field-group" style="margin-top:14px;">
+      <label class="field-label">Correo electrónico</label>
+      <div class="field-sub">El justificante se enviara al correo especificado, dejar en blanco para usar dirección aleatoria</div>
+      <input class="field-input" id="email" type="email" placeholder=""/>
+      <div class="field-error" id="err_email">Email inválido</div>
+    </div>
+
+    <!-- Fecha mínima -->
+    <div class="field-group" style="margin-top:14px;">
+      <label class="field-label">Fecha minima de la cita</label>
+      <div class="date-wrap">
+        <span>📅</span>
+        <input type="date" id="icp_date_from"/>
+      </div>
+    </div>
+
+    <!-- Fecha máxima -->
+    <div class="field-group" style="margin-top:14px;">
+      <label class="field-label">Fecha maxima de la cita</label>
+      <div class="date-wrap">
+        <span>📅</span>
+        <input type="date" id="icp_date_to"/>
+      </div>
+    </div>
+
+    <!-- Exclusion calendar -->
+    <div class="field-group" style="margin-top:14px;">
+      <label class="field-label">No quiero que se reserve la cita estos días</label>
+      <div class="excl-cal" id="exclCal">
+        <div class="excl-cal-title" id="exclTitle"></div>
+        <div class="excl-grid" id="exclGrid"></div>
+      </div>
+    </div>
+
+    <!-- Telegram hidden -->
+    <input type="hidden" id="telegram_id" value=""/>
+
+    <!-- Observaciones -->
+    <div class="field-group" style="margin-top:14px;">
+      <label class="field-label">Observaciones</label>
+      <input class="field-input" id="observaciones" type="text" placeholder=""/>
+    </div>
+
+    <!-- Buttons -->
+    <button class="btn-cert" type="button" onclick="alert('Función de certificados próximamente disponible')">
+      Añadir certificados digitales
+    </button>
+    <button class="btn-send" type="button" onclick="submitBooking()">
+      <span>Enviar solicitud</span>
+      <span>→</span>
+    </button>
+    <button class="btn-back-icp" type="button" onclick="goStep('4b')">← Volver</button>
+  </div>
+</div>
+
+<!-- STEP 6: Summary -->
+<div class="section" id="step6">
+  <div class="section-title">✅ Confirmar y Reservar</div>
+  <div class="summary-card" id="summaryCard"></div>
+  <button class="btn btn-back" onclick="goStep(5)">← Editar</button>
+  <button class="btn btn-success" onclick="submitBooking()">🚀 Iniciar Búsqueda Automática</button>
+</div>
+
+<!-- SUCCESS -->
+<div class="section" id="stepSuccess">
+  <div class="success-screen">
+    <div class="success-icon">🎉</div>
+    <div class="success-title">¡Solicitud Enviada!</div>
+    <div class="success-sub">Tu Booking ID:</div>
+    <div class="booking-id" id="bookingIdDisplay"></div>
+    <div style="background:#1a3528;border-radius:12px;padding:14px;margin:16px 0;text-align:left">
+      <p style="color:#3bc67e;font-weight:700;margin-bottom:8px">✅ ¿Qué pasa ahora?</p>
+      <p style="color:var(--text);font-size:13px;line-height:1.8">
+        🤖 El bot busca cita <strong>24/7</strong> automáticamente<br/>
+        📅 Dentro del rango de fechas que elegiste<br/>
+        📲 Recibirás notificación en <strong>Telegram</strong><br/>
+        📄 PDF de confirmación se enviará al bot<br/>
+        🔄 Si no hay cita, reintenta cada 5 minutos
+      </p>
+    </div>
+    <p style="color:var(--muted);font-size:12px">Puedes cerrar esta página. Todo lo demás lo hace el bot.</p>
+  </div>
+</div>
+
+<script>
+const PROVINCIAS = {
+  "15": {
+    "name": "A Coruña",
+    "tramites": [
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-ASILO INFORMACION",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICIA-CERTIFICADOS Y ASIGNACION NIE",
+      "POLICIA-CERTIFICADOS Y ASIGNACION NIE (NO COMUNITARIOS)",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "ACCESO A 1ª AUT. DE RESIDENCIA DE LARGA DURACIÓN Y LARGA DURACIÓN UE",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE TRABAJO POR ESTUDIOS",
+      "ESTANCIA POR ESTUDIOS",
+      "FAMILIARES DE RESIDENTES COMUNITARIOS",
+      "INFORMACIÓN",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA A CORUÑA - C/ RAMON Y CAJAL 4",
+      "CNP - COMISARIA FERROL - C/ DOLORES 1",
+      "CNP - COMISARIA SANTIAGO DE COMPOSTELA - C/ HORREO 4"
+    ]
+  },
+  "2": {
+    "name": "Albacete",
+    "tramites": [
+      "POLICIA - CERTIFICADOS CONCORDANCIA",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICÍA - TÍTULOS DE VIAJE",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADOS Y ASIGNACION NIE (NO COMUNITARIOS)",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA - SOLICITUD DE APATRIDA",
+      "POLICÍA - UCRANIA : SOLICITUD PROTECCIÓN TEMPORAL DESPLAZADOS",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICÍA-RECOGIDA DE TARJETA ROJA (PROTECCIÓN INTERNACIONAL)",
+      "POLICÍA-SOLICITUD ASILO",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA ALBACETE - C/ TEODORO CAMINO 5",
+      "CNP - COMISARIA HELLIN - C/ CASTILLA LA MANCHA 2"
+    ]
+  },
+  "3": {
+    "name": "Alicante",
+    "tramites": [
+      "Asignación de N.I.E.",
+      "Certificado de residente o no residente",
+      "CERTIFICADOS UE",
+      "POLICIA - CERTIFICADOS CONCORDANCIA",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICÍA - UCRANIA : SOLICITUD PROTECCIÓN TEMPORAL DESPLAZADOS",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL POR MOTIVOS DE ARRAIGO Y OTRAS CIRCUNSTANCIAS EXCEPCIONALES",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA DE MENORES O INCAPACITADOS NACIDOS EN ESPAÑA",
+      "AUTORIZACIÓN DE RESIDENCIA DE MENORES O INCAPACITADOS NO NACIDOS EN ESPAÑA",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "ESTANCIA POR ESTUDIOS",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "Recuperación de la autorización de larga duración",
+      "REGISTRO",
+      "RENOVACIONES DE RESIDENCIA",
+      "Renovaciones, Prórrogas y Modificaciones",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA ALICANTE CENTRO - C/ MEDICO PASCUAL PEREZ 37",
+      "CNP - COMISARIA BENIDORM - C/ LLUIS SITGES 3",
+      "CNP - COMISARIA DENIA - C/ DIANA 14",
+      "CNP - COMISARIA ELCHE - C/ CORREGIDOR JOAQUIN MENDUIÑA 30",
+      "CNP - COMISARIA ELDA - C/ OSCAR ESPLA 15",
+      "CNP - COMISARIA ORIHUELA - C/ JOSE ANTONIO 2",
+      "CNP - COMISARIA TORREVIEJA - AV. DR. GREGORIO MARAÑON 22",
+      "CNP - COMISARIA VILLENA - AV. DE LA CONSTITUCION 50"
+    ]
+  },
+  "4": {
+    "name": "Almería",
+    "tramites": [
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "FAMILIARES DE RESIDENTES COMUNITARIOS",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA ALMERIA CENTRO - C/ CASTRO 4",
+      "CNP - COMISARIA EL EJIDO - C/ BENITAGLA 4",
+      "CNP - COMISARIA ROQUETAS DE MAR - C/ JOSE MANZANO 2"
+    ]
+  },
+  "1": {
+    "name": "Álava / Araba",
+    "tramites": [
+      "POLICIA - OTROS TRÁMITES COMISARIA",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICÍA - SOLICITUD DE APATRIDA",
+      "POLICÍA - UCRANIA : SOLICITUD PROTECCIÓN TEMPORAL DESPLAZADOS",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "INFORMACIÓN",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA VITORIA-GASTEIZ - C/ JOSE LUIS IÑARRA 4"
+    ]
+  },
+  "33": {
+    "name": "Asturias",
+    "tramites": [
+      "POLICIA - COMUNICACIÓN DE CAMBIO DE DOMICILIO",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICÍA - TÍTULOS DE VIAJE",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICIA-CERTIFICADOS Y ASIGNACION NIE",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "FAMILIARES DE RESIDENTES COMUNITARIOS",
+      "INFORMACIÓN",
+      "SOLICITUD DE AUTORIZACIONES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA AVILES - C/ LA MURALLA 4",
+      "CNP - COMISARIA GIJON - C/ RODRIGUEZ SAN PEDRO 2",
+      "CNP - COMISARIA LANGREO - C/ LLARANES 7",
+      "CNP - COMISARIA OVIEDO - C/ GENERAL ELORZA 32"
+    ]
+  },
+  "5": {
+    "name": "Ávila",
+    "tramites": [
+      "POLICIA - COMUNICACIÓN DE CAMBIO DE DOMICILIO",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICÍA - TÍTULOS DE VIAJE",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS Y ASIGNACION NIE",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA - SOLICITUD DE APATRIDA",
+      "POLICÍA - UCRANIA : SOLICITUD PROTECCIÓN TEMPORAL DESPLAZADOS",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "SOLICITUD DE AUTORIZACIONES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA AVILA - C/ DUQUE DE ALBA 2"
+    ]
+  },
+  "6": {
+    "name": "Badajoz",
+    "tramites": [
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICÍA - TÍTULOS DE VIAJE",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-ASILO INFORMACION",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS Y ASIGNACION NIE",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA CERTIFICADO Y AUTORIZACIÓN DE REGRESO",
+      "POLICÍA-RECOGIDA DE TARJETA ROJA (PROTECCIÓN INTERNACIONAL)",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "INFORMACIÓN",
+      "SOLICITUD DE AUTORIZACIONES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA BADAJOZ - C/ RAFAEL LUCENQUI 5",
+      "CNP - COMISARIA DON BENITO - AV. VILLANUEVA 2",
+      "CNP - COMISARIA MERIDA - C/ SAGASTA 15"
+    ]
+  },
+  "8": {
+    "name": "Barcelona",
+    "tramites": [
+      "AUTORIZACIÓN DE REGRESO",
+      "POLICIA - CERTIFICADOS CONCORDANCIA",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICÍA - TÍTULOS DE VIAJE",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICIA-CERTIFICADOS Y ASIGNACION NIE",
+      "POLICIA-CERTIFICADOS Y ASIGNACION NIE (NO COMUNITARIOS)",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-ASIGNACIÓN NIE NO RESIDENTE NO COMUNITARIO",
+      "POLICÍA-CERTIFICADOS (RESIDENCIA Y CONCORDANCIA)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA BADALONA - AVDA. DELS VENTS 9",
+      "CNP - COMISARIA CASTELLDEFELS - PLAÇA DE L'ESPERANTO 4",
+      "CNP - COMISARIA CERDANYOLA DEL VALLES - VERGE DE LES FEIXES 4",
+      "CNP - COMISARIA CORNELLA DE LLOBREGAT - AV. SANT ILDEFONS S/N",
+      "CNP - COMISARIA EL PRAT DE LLOBREGAT - CENTRE 4",
+      "CNP - COMISARIA GRANOLLERS - RICOMA 65",
+      "CNP - COMISARIA IGUALADA - PRAT DE LA RIBA 13",
+      "CNP - COMISARIA L'HOSPITALET DE LLOBREGAT - Rbla. Just Oliveres 43",
+      "CNP - COMISARIA MANRESA - SOLER I MARCH 5",
+      "CNP - COMISARIA MATARO - AV. GATASSA 15",
+      "CNP - COMISARIA MONTCADA I REIXAC - MAJOR 38",
+      "CNP - COMISARIA RIPOLLET - TAMARIT 78",
+      "CNP - COMISARIA RUBI - TERRASSA 16",
+      "CNP - COMISARIA SABADELL - BATLLEVELL 115",
+      "CNP - COMISARIA SANT ADRIA DEL BESOS - AV. JOAN XXIII 2",
+      "CNP - COMISARIA SANT BOI DE LLOBREGAT - RIERA BASTE 43",
+      "CNP - COMISARIA SANT CUGAT DEL VALLES - VALLES 1",
+      "CNP - COMISARIA SANT FELIU DE LLOBREGAT - CARRERETES 9",
+      "CNP - COMISARIA SANTA COLOMA DE GRAMENET - IRLANDA 67",
+      "CNP - COMISARIA TERRASSA - BALDRICH 13",
+      "CNP - COMISARIA VIC - BISBE MORGADES 4",
+      "CNP - COMISARIA VILADECANS - AVDA. BALLESTER 2",
+      "CNP - COMISARIA VILAFRANCA DEL PENEDES - AV. RONDA DEL MAR 109",
+      "CNP - COMISARIA VILANOVA I LA GELTRU - VAPOR 19",
+      "CNP MALLORCA-GRANADOS - MALLORCA 213",
+      "CNP - RAMBLA GUIPUSCOA 74"
+    ]
+  },
+  "48": {
+    "name": "Bizkaia",
+    "tramites": [
+      "Expedición de Carta de Invitación",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICÍA - TÍTULOS DE VIAJE",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - UCRANIA : SOLICITUD PROTECCIÓN TEMPORAL DESPLAZADOS",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "RENOVACIONES, PRÓRROGAS O MODIFICACIONES",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA BARAKALDO - C/ BUEN PASTOR 1",
+      "CNP - COMISARIA BASAURI - C/ ARIZ 30",
+      "CNP - COMISARIA BILBAO CENTRO - C/ LUIS BRIÑAS 14",
+      "CNP - COMISARIA DURANGO - C/ KURUTZIAGA 28",
+      "CNP - COMISARIA GETXO - AV. LOS CHOPOS 2"
+    ]
+  },
+  "9": {
+    "name": "Burgos",
+    "tramites": [
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "SOLICITUD DE AUTORIZACIONES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA BURGOS - C/ SANZ PASTOR 2",
+      "CNP - COMISARIA MIRANDA DE EBRO - AV. NAVARRA 24"
+    ]
+  },
+  "10": {
+    "name": "Cáceres",
+    "tramites": [
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA - UCRANIA : SOLICITUD PROTECCIÓN TEMPORAL DESPLAZADOS",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-SOLICITUD TARJETA ROJA",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "SOLICITUD DE AUTORIZACIONES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA CACERES - C/ MONTESINOS 2",
+      "CNP - COMISARIA PLASENCIA - C/ VIDRIERAS 7"
+    ]
+  },
+  "11": {
+    "name": "Cádiz",
+    "tramites": [
+      "POLICIA - CERTIFICADOS CONCORDANCIA",
+      "POLICIA - COMUNICACIÓN DE CAMBIO DE DOMICILIO",
+      "POLICIA - OTROS TRÁMITES COMISARIA",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICÍA - TÍTULOS DE VIAJE",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICIA-CERTIFICADOS Y ASIGNACION NIE",
+      "POLICIA-CERTIFICADOS Y ASIGNACION NIE (NO COMUNITARIOS)",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA - PRORROGA DE ESTANCIA CON VISADO",
+      "POLICÍA - PRORROGA DE ESTANCIA SIN VISADO",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-ASIGNACIÓN NIE NO RESIDENTE NO COMUNITARIO",
+      "POLICÍA-CERTIFICADOS (RESIDENCIA Y CONCORDANCIA)",
+      "POLICÍA-CONSULTA N.º DE NIE ASIGNADO",
+      "POLICÍA-DECLARACIÓN DE ENTRADA",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA CERTIFICADO Y AUTORIZACIÓN DE REGRESO",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "ASIGNACION NIE CIUDADANOS COMUNITARIOS",
+      "INFORMACIÓN",
+      "REAGRUPACIÓN FAMILIAR",
+      "SOLICITUD DE AUTORIZACIONES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA ALGECIRAS - C/ JOSE ANTONIO 5",
+      "CNP - COMISARIA CADIZ - C/ ANA DE VIYA 1",
+      "CNP - COMISARIA EL PUERTO DE SANTA MARIA - C/ LUIS DE REQUESENS 3",
+      "CNP - COMISARIA JEREZ DE LA FRONTERA - C/ SEVILLA 1",
+      "CNP - COMISARIA LA LINEA DE LA CONCEPCION - C/ DUQUE DE TETUÁN 17",
+      "CNP - COMISARIA SANLUCAR DE BARRAMEDA - C/ BARRAMEDA 2"
+    ]
+  },
+  "39": {
+    "name": "Cantabria",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA SANTANDER - C/ VARGAS 51",
+      "CNP - COMISARIA TORRELAVEGA - C/ INDUSTRIA 3"
+    ]
+  },
+  "12": {
+    "name": "Castellón",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA CASTELLON DE LA PLANA - C/ ORFEBRES 6",
+      "CNP - COMISARIA VILA-REAL - C/ MAYOR 78",
+      "CNP - COMISARIA VINAROS - C/ SANT GREGORI 2"
+    ]
+  },
+  "51": {
+    "name": "Ceuta",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "SOLICITUD DE AUTORIZACIONES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA CEUTA - C/ RECINTO SUR S/N"
+    ]
+  },
+  "13": {
+    "name": "Ciudad Real",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA CIUDAD REAL - C/ ALARCOS 20",
+      "CNP - COMISARIA PUERTOLLANO - C/ JESUS FERNANDEZ MALO 1"
+    ]
+  },
+  "14": {
+    "name": "Córdoba",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA CORDOBA CENTRO - C/ POETA JUAN BERNIER 2",
+      "CNP - COMISARIA LUCENA - C/ MARQUES DE COMARES 23",
+      "CNP - COMISARIA POZOBLANCO - C/ DOCTOR MANUEL COBOS 1"
+    ]
+  },
+  "16": {
+    "name": "Cuenca",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA CUENCA - C/ FERMIN CABALLERO 8",
+      "CNP - COMISARIA TARANCÓN - C/ GOYA 4"
+    ]
+  },
+  "20": {
+    "name": "Gipuzkoa",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA IRUN - AV. IPARRALDE 34",
+      "CNP - COMISARIA SAN SEBASTIAN - C/ EASO 8"
+    ]
+  },
+  "17": {
+    "name": "Girona",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA BLANES - C/ ESPLANADA DEL PORT 1",
+      "CNP - COMISARIA FIGUERES - C/ AIRÀ 10",
+      "CNP - COMISARIA GIRONA - C/ BACIÀ 4",
+      "CNP - COMISARIA OLOT - C/ SANT ROCA 22"
+    ]
+  },
+  "18": {
+    "name": "Granada",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA BAZA - C/ PEDRO POVEDA 2",
+      "CNP - COMISARIA GRANADA CENTRO - C/ DUQUESA 21",
+      "CNP - COMISARIA MOTRIL - C/ AVENIDA 1"
+    ]
+  },
+  "19": {
+    "name": "Guadalajara",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA AZUQUECA DE HENARES - AV. CONSTITUCION 17",
+      "CNP - COMISARIA GUADALAJARA - C/ ARAGON 4"
+    ]
+  },
+  "21": {
+    "name": "Huelva",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA ALMONTE - C/ REAL 2",
+      "CNP - COMISARIA HUELVA - C/ PLUS ULTRA 4",
+      "CNP - COMISARIA LEPE - C/ CERVANTES 2"
+    ]
+  },
+  "22": {
+    "name": "Huesca",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA FRAGA - C/ PIRINEOS 2",
+      "CNP - COMISARIA HUESCA - C/ RICARDO DEL ARCO 6",
+      "CNP - COMISARIA MONZON - C/ SANTA BARBARA 11"
+    ]
+  },
+  "7": {
+    "name": "Illes Balears",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "INFORMACIÓN GENERAL - IBIZA",
+      "RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "SOLICITUD AUTORIZACIONES - IBIZA",
+      "SOLICITUD AUTORIZACIONES - MALLORCA",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA IBIZA - C/ VICENTE CUERVO 3",
+      "CNP - COMISARIA INCA - C/ PAU 2",
+      "CNP - COMISARIA MANACOR - C/ SOLEDAD 3",
+      "CNP - COMISARIA MENORCA (MAHON) - AV. VIVES LLULL S/N",
+      "CNP - COMISARIA PALMA CENTRO - C/ RUIZ DE ALDA 8",
+      "CNP - COMISARIA PALMA SON CASTELLO - C/ GREMIO HERRERO 3"
+    ]
+  },
+  "23": {
+    "name": "Jaén",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA ANDUJAR - C/ MUÑOZ GRANDE 7",
+      "CNP - COMISARIA JAEN - C/ ARQUITECTO BERGES 14",
+      "CNP - COMISARIA LINARES - C/ CORREDERA DE SAN MARCOS 5",
+      "CNP - COMISARIA UBEDA - C/ HORNO CONTADOR 2"
+    ]
+  },
+  "26": {
+    "name": "La Rioja",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA CALAHORRA - C/ ERCILLA 4",
+      "CNP - COMISARIA LOGROÑO - C/ PORTALES 3"
+    ]
+  },
+  "35": {
+    "name": "Las Palmas",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA FUERTEVENTURA (PUERTO DEL ROSARIO) - AV. PRIMERO DE MAYO 39",
+      "CNP - COMISARIA LANZAROTE (ARRECIFE) - C/ JOSE ANTONIO 36",
+      "CNP - COMISARIA LAS PALMAS CENTRO - C/ BUENOS AIRES 4",
+      "CNP - COMISARIA MASPALOMAS - AV. TIRAJANA 14",
+      "CNP - COMISARIA TELDE - C/ LEON Y CASTILLO 73"
+    ]
+  },
+  "24": {
+    "name": "León",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA LEON - C/ VILLA BENAVENTE 8",
+      "CNP - COMISARIA PONFERRADA - C/ ORTEGA Y GASSET 1"
+    ]
+  },
+  "25": {
+    "name": "Lleida",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA LLEIDA - C/ DOCTOR COMBELLES 2"
+    ]
+  },
+  "27": {
+    "name": "Lugo",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA LUGO - C/ CAMPO CASTELO 7"
+    ]
+  },
+  "28": {
+    "name": "Madrid",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "ASILO - PRIMERA CITA-provincia de Madrid",
+      "POLICÍA-RECOGIDA DE TARJETA ROJA (PROTECCIÓN INTERNACIONAL)",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA-ASILO INFORMACION",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL POR MOTIVOS DE ARRAIGO Y OTRAS CIRCUNSTANCIAS EXCEPCIONALES",
+      "Recuperación de la autorización de larga duración",
+      "ACCESO A 1ª AUT. DE RESIDENCIA DE LARGA DURACIÓN Y LARGA DURACIÓN UE",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "COMISARIA ALCALA DE HENARES - AV. JUAN CARLOS I 8",
+      "COMISARIA ALCOBENDAS - C/ JUAN RAMON JIMENEZ 4",
+      "COMISARIA ALCORCON - C/ MOSTOLES 8",
+      "COMISARIA ARGANZUELA - C/ EMBAJADORES 116",
+      "COMISARIA CARABANCHEL - C/ GENERAL RICARDOS 110",
+      "COMISARIA COSLADA - C/ HENARES 12",
+      "COMISARIA FUENCARRAL - C/ PLASENCIA 3",
+      "COMISARIA GETAFE - AV. BLAS TELLO 3",
+      "COMISARIA HORTALEZA - C/ HERACLITO 2",
+      "COMISARIA LATINA - C/ AVIACION ESPAÑOLA S/N",
+      "COMISARIA LEGANES - C/ OBISPADO 1",
+      "COMISARIA MORATALAZ - C/ CORREGIDOR DIEGO DE VALDERRABANO 13",
+      "COMISARIA MOSTOLES - C/ NEVERO 2",
+      "COMISARIA PARLA - C/ ARCO 2",
+      "COMISARIA POZUELO DE ALARCON - C/ AGUILAS 3",
+      "COMISARIA RETIRO - C/ DOCTOR ESQUERDO 26",
+      "COMISARIA TETUAN - C/ RAMON Y CAJAL 9",
+      "COMISARIA TORREJON DE ARDOZ - C/ MAYOR 70",
+      "COMISARIA USERA - C/ PRADILLO 40",
+      "COMISARIA VALLECAS - C/ SIERRA DE ALQUIFE 5",
+      "OFICINA DE ASILO - PRADILLO 40"
+    ]
+  },
+  "29": {
+    "name": "Málaga",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "POLICÍA-RECOGIDA DE TARJETA ROJA (PROTECCIÓN INTERNACIONAL)",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "ACCESO A 1ª AUT. DE RESIDENCIA DE LARGA DURACIÓN Y LARGA DURACIÓN UE",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA ANTEQUERA - C/ INFANTE DON FERNANDO 40",
+      "CNP - COMISARIA COIN - C/ REAL 80",
+      "CNP - COMISARIA ESTEPONA - AV. ESPAÑA 140",
+      "CNP - COMISARIA FUENGIROLA - C/ CAPITAN 5",
+      "CNP - COMISARIA MALAGA CENTRO - C/ MAURICIO MORO PARETO 1",
+      "CNP - COMISARIA MARBELLA - C/ JACINTO BENAVENTE S/N",
+      "CNP - COMISARIA TORREMOLINOS - AV. PALMA DE MALLORCA 12",
+      "CNP - COMISARIA VELEZ-MALAGA - C/ PINTADA 12"
+    ]
+  },
+  "52": {
+    "name": "Melilla",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "SOLICITUD DE AUTORIZACIONES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA MELILLA - C/ GENERAL POLAVIEJA 2"
+    ]
+  },
+  "30": {
+    "name": "Murcia",
+    "tramites": [
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA- EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITANTES DE ASILO",
+      "POLICIA- SOLICITUD ASILO",
+      "POLICIA-Asignación de NIE - Murcia",
+      "POLICIA-Autorización de Regreso - Murcia",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICIA-Expedición de Carta de Invitación - Murcia",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA - SOLICITUD DE APATRIDA",
+      "POLICÍA - UCRANIA : SOLICITUD PROTECCIÓN TEMPORAL DESPLAZADOS",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "SOLICITUD DE AUTORIZACIONES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA CARTAGENA - C/ REAL 10",
+      "CNP - COMISARIA LORCA - AV. EUROPA 4",
+      "CNP - COMISARIA MOLINA DE SEGURA - AV. CONSTITUCION 56",
+      "CNP - COMISARIA MURCIA CENTRO - C/ ACISCLO DIAZ 8",
+      "CNP - COMISARIA YECLA - C/ ANTONIO NAVARRO 48"
+    ]
+  },
+  "31": {
+    "name": "Navarra",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA PAMPLONA - C/ YANGUAS Y MIRANDA 6",
+      "CNP - COMISARIA TUDELA - AV. ZARAGOZA 38"
+    ]
+  },
+  "32": {
+    "name": "Ourense",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA OURENSE - C/ CORONEL CEANO 7"
+    ]
+  },
+  "34": {
+    "name": "Palencia",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA PALENCIA - C/ GENERAL AMOR 1"
+    ]
+  },
+  "36": {
+    "name": "Pontevedra",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA PONTEVEDRA - C/ JOAQUIN COSTA 5",
+      "CNP - COMISARIA VILAGARCIA DE AROUSA - C/ TORO 1",
+      "CNP - COMISARIA VIGO CENTRO - C/ JOAQUIN YAÑEZ 6",
+      "CNP - COMISARIA VIGO COIA - C/ BARCELONA 11"
+    ]
+  },
+  "37": {
+    "name": "Salamanca",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA SALAMANCA - C/ JULIAN SANCHEZ EL CHARRO 2"
+    ]
+  },
+  "38": {
+    "name": "S.C. Tenerife",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - GOMERA (SAN SEBASTIAN) - AV. FRED OLSEN S/N",
+      "CNP - ICOD DE LOS VINOS - C/ OBISPO PEREZ CACERES 1",
+      "CNP - LA LAGUNA - C/ SAN AGUSTIN 30",
+      "CNP - PLAYA DE LAS AMERICAS - AV. DE LOS PUEBLOS 2",
+      "CNP - PUERTO DE LA CRUZ / LOS REALEJOS - AV. DEL CAMPO Y LLARENA 3",
+      "OUE SANTA CRUZ DE TENERIFE - C/ LA MARINA 20"
+    ]
+  },
+  "40": {
+    "name": "Segovia",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA SEGOVIA - C/ JOSE ZORRILLA 26"
+    ]
+  },
+  "41": {
+    "name": "Sevilla",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "ACCESO A 1ª AUT. DE RESIDENCIA DE LARGA DURACIÓN Y LARGA DURACIÓN UE",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA ALCALA DE GUADAIRA - C/ GARCIA MORATO 2",
+      "CNP - COMISARIA DOS HERMANAS - C/ SANTA TERESA DE JOURNET 2",
+      "CNP - COMISARIA SEVILLA CENTRO - C/ BUEN AIRE 1",
+      "CNP - COMISARIA SEVILLA NORTE - C/ RESOLANA 18",
+      "CNP - COMISARIA SEVILLA SUR - AV. KANSAS CITY S/N",
+      "CNP - COMISARIA UTRERA - C/ JOSE ARPA 7"
+    ]
+  },
+  "42": {
+    "name": "Soria",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA SORIA - C/ NUMANCIA 1"
+    ]
+  },
+  "43": {
+    "name": "Tarragona",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA EL VENDRELL - AV. SANTA OLIVA 6",
+      "CNP - COMISARIA REUS - C/ SANT LLORENÇ 18",
+      "CNP - COMISARIA TARRAGONA - C/ CAMI DE LA PEDRERA 2",
+      "CNP - COMISARIA TORTOSA - C/ MONTCADA 6"
+    ]
+  },
+  "44": {
+    "name": "Teruel",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA TERUEL - C/ NUEVA 6"
+    ]
+  },
+  "45": {
+    "name": "Toledo",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA TALAVERA DE LA REINA - AV. GREGORIO RUIZ 2",
+      "CNP - COMISARIA TOLEDO - C/ BELEN 5"
+    ]
+  },
+  "46": {
+    "name": "Valencia",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "POLICÍA-RECOGIDA DE TARJETA ROJA (PROTECCIÓN INTERNACIONAL)",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "Recuperación de la autorización de larga duración",
+      "ACCESO A 1ª AUT. DE RESIDENCIA DE LARGA DURACIÓN Y LARGA DURACIÓN UE",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA ALZIRA - AV. PAIS VALENCIA 1",
+      "CNP - COMISARIA BURJASSOT - C/ ACADEMIA 8",
+      "CNP - COMISARIA GANDIA - C/ MAJOR 67",
+      "CNP - COMISARIA SAGUNTO - C/ CAMÍ REAL 177",
+      "CNP - COMISARIA TORRENT - C/ PICANYA 18",
+      "CNP - COMISARIA VALENCIA CENTRO - C/ LEPANTO 5",
+      "CNP - COMISARIA VALENCIA PATRAIX - C/ BOTANICO CAVANILLES 37",
+      "CNP - COMISARIA VALENCIA PUERTO - AV. DEL PORT 56"
+    ]
+  },
+  "47": {
+    "name": "Valladolid",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA VALLADOLID CENTRO - C/ DOCTOR CAZALLA 4",
+      "CNP - COMISARIA VALLADOLID SUR - C/ PANADEROS 1"
+    ]
+  },
+  "49": {
+    "name": "Zamora",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA ZAMORA - C/ BENAVENTE 2"
+    ]
+  },
+  "50": {
+    "name": "Zaragoza",
+    "tramites": [
+      "POLICÍA-TOMA DE HUELLAS (EXPEDICIÓN DE TARJETA) INICIAL, RENOVACIÓN, DUPLICADO Y LEY 14/2013",
+      "POLICIA - RECOGIDA DE TARJETA DE IDENTIDAD DE EXTRANJERO (TIE)",
+      "POLICIA-ASIGNACIÓN DE NIE",
+      "POLICIA-CARTA DE INVITACIÓN",
+      "POLICIA-CERTIFICADO DE REGISTRO DE CIUDADANO DE LA U.E.",
+      "POLICIA-CERTIFICADOS (DE RESIDENCIA, DE NO RESIDENCIA Y DE CONCORDANCIA)",
+      "POLICÍA - CÉDULA DE INSCRIPCIÓN",
+      "POLICÍA TARJETA CONFLICTO UCRANIA–ПОЛІЦІЯ -КАРТКА ДЛЯ ПЕРЕМІЩЕНИХ ОСІБ ВНАСЛІДОК КОНФЛІКТУ В УКРАЇНІ",
+      "Policía-Documento acreditativo solicitante,en tramitación,de protección internacional (tarjeta roja)",
+      "POLICÍA-EXP.TARJETA ASOCIADA AL ACUERDO DE RETIRADA CIUDADANOS BRITÁNICOS Y SUS FAMILIARES (BREXIT)",
+      "POLICÍA-EXPEDICIÓN DE TARJETAS CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-PRORROGA DE ESTANCIA",
+      "POLICÍA-RECOGIDA DE LA TIE CUYA AUTORIZACIÓN RESUELVE LA DIRECCIÓN GENERAL DE GESTIÓN MIGRATORIA",
+      "POLICÍA-EXPEDICIÓN/RENOVACIÓN DE DOCUMENTOS DE SOLICITUD DE APATRIDIA",
+      "POLICIA-AUTORIZACIÓN DE REGRESO",
+      "POLICIA-INFORMACION DE TRÁMITES DE LA COMISARÍA DE POLICIA",
+      "AUT. DE RESIDENCIA TEMPORAL POR CIRCUNS. EXCEPCIONALES POR ARRAIGO",
+      "AUTORIZACIONES DE RESIDENCIA TEMPORAL Y PERMANENTE DE FAMILIAR DE CIUDADANO DE LA UNION EUROPEA",
+      "AUTORIZACIONES DE TRABAJO, RENOVACIONES, PRÓRROGAS Y MODIFICACIONES",
+      "AUTORIZACIÓN DE REGRESO",
+      "AUTORIZACIÓN DE RESIDENCIA TEMPORAL POR REAGRUPACIÓN FAMILIAR",
+      "INFORMACIÓN",
+      "MODIFICACIÓN de las SITUACIONES (sujeto legitimado EXTRANJERO)",
+      "REAGRUPACIÓN FAMILIAR",
+      "RENOVACIONES DE AUT. DE RESIDENCIA y/o AUT. DE RESIDENCIA Y TRABAJO",
+      "RENOVACIÓN AUTORIZACIÓN RESIDENCIA POR REAGRUPACIÓN FAMILIAR",
+      "RESIDENCIA TEMPORAL DE FAMILIARES DE PERSONAS CON NACIONALIDAD ESPAÑOLA",
+      "SOLICITUD DE AUTORIZACIONES INICIALES",
+      "AUTORIZACIONES EXTRAORDINARIAS: RESIDENCIA CIR. EXC. POR RAZÓN DE ARRAIGO Y ARRAIGO EXTRAORDINARIO"
+    ],
+    "oficinas": [
+      "CNP - COMISARIA CALATAYUD - C/ ARCADAS 2",
+      "CNP - COMISARIA ZARAGOZA CENTRO - C/ DOMINGO MIRAL 3",
+      "CNP - COMISARIA ZARAGOZA NORTE - AV. ALCALDE CABALLERO 2",
+      "CNP - COMISARIA ZARAGOZA SUR - C/ GOYA 20"
+    ]
+  }
+};
+// ── State ──────────────────────────────────────────────────────────────────
+let selectedProvince = null;
+let selectedTramite  = null;
+let selectedOffice   = null;
+let selectedOffices  = []; // multi-select for ICP form
+let dateFrom = null, dateTo = null;
+let calMonth, calYear;
+let excludedDates = [];
+let exclMonth, exclYear;
+
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS   = ['L','M','X','J','V','S','D'];
+
+// ── Init ────────────────────────────────────────────────────────────────────
+window.onload = function() {
+  const today = new Date();
+  calMonth = today.getMonth(); calYear = today.getFullYear();
+  exclMonth = today.getMonth(); exclYear = today.getFullYear();
+
+  // Set default date range in ICP form
+  const df = document.getElementById('icp_date_from');
+  const dt = document.getElementById('icp_date_to');
+  if (df) df.value = dateStr(today);
+  if (dt) {
+    const sixMonths = new Date(today);
+    sixMonths.setMonth(sixMonths.getMonth() + 6);
+    dt.value = dateStr(sixMonths);
+  }
+
+  renderCalendar();
+  renderExclCalendar();
+  buildProvinceGrid();
+
+  // URL params
+  const params = new URLSearchParams(window.location.search);
+  const pid  = params.get('pid');
+  const tid  = params.get('tid');
+  const oidx = params.get('oidx');
+  const uid  = params.get('uid');
+
+  if (uid) {
+    const el = document.getElementById('telegram_id');
+    if (el) el.value = uid;
+  }
+
+  if (pid && PROVINCIAS[pid]) {
+    selectProvince(pid);
+    if (tid !== null && PROVINCIAS[pid].tramites[tid]) {
+      selectedTramite = parseInt(tid);
+      if (oidx !== null) {
+        selectedOffice = oidx === 'ANY' ? 'ANY' : parseInt(oidx);
+        setTimeout(() => { setDefaultDatesAndContinue(); }, 200);
+      } else {
+        setTimeout(() => goStep(3), 200);
+      }
+    } else {
+      setTimeout(() => goStep(2), 200);
+    }
+  }
+
+  // Step 4 next button
+  const b4 = document.getElementById('btnStep4');
+  if (b4) b4.onclick = () => { if (dateFrom && dateTo) goStep('4b'); };
+};
+
+// ── Province ────────────────────────────────────────────────────────────────
+function buildProvinceGrid(filter = '') {
+  const grid = document.getElementById('provGrid');
+  const sorted = Object.entries(PROVINCIAS).sort((a,b) => a[1].name.localeCompare(b[1].name, 'es'));
+  grid.innerHTML = '';
+  sorted
+    .filter(([,p]) => p.name.toLowerCase().includes(filter.toLowerCase()))
+    .forEach(([id, p]) => {
+      const btn = document.createElement('button');
+      btn.className = 'prov-btn' + (selectedProvince === id ? ' selected' : '');
+      btn.textContent = p.name;
+      btn.onclick = () => selectProvince(id);
+      grid.appendChild(btn);
+    });
+}
+function filterProvinces() { buildProvinceGrid(document.getElementById('provSearch').value); }
+function selectProvince(id) {
+  selectedProvince = id; selectedTramite = null; selectedOffice = null;
+  buildProvinceGrid(document.getElementById('provSearch').value);
+  const btn1 = document.getElementById('btnStep1');
+  if (btn1) btn1.disabled = false;
+}
+
+// ── Tramite ─────────────────────────────────────────────────────────────────
+function buildTramiteList() {
+  const list = document.getElementById('tramiteList');
+  list.innerHTML = '';
+  PROVINCIAS[selectedProvince].tramites.forEach((name, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tramite-btn' + (selectedTramite === i ? ' selected' : '');
+    btn.innerHTML = `<span class="tramite-dot" style="background:#4dabf7"></span>${name}`;
+    btn.onclick = () => {
+      selectedTramite = i;
+      buildTramiteList();
+      document.getElementById('btnStep2').disabled = false;
+    };
+    list.appendChild(btn);
+  });
+}
+
+// ── Office (step 3 single select) ───────────────────────────────────────────
+function buildOfficeList() {
+  const list = document.getElementById('officeList');
+  list.innerHTML = '';
+  const offices = PROVINCIAS[selectedProvince].oficinas;
+
+  // "Any" option
+  const anyBtn = document.createElement('button');
+  anyBtn.className = 'office-btn' + (selectedOffice === 'ANY' ? ' selected' : '');
+  anyBtn.innerHTML = `<span class="office-icon">🌐</span>Cualquier oficina disponible`;
+  anyBtn.onclick = () => {
+    selectedOffice = 'ANY';
+    buildOfficeList();
+    document.getElementById('btnStep3').disabled = false;
+  };
+  list.appendChild(anyBtn);
+
+  offices.forEach((name, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'office-btn' + (selectedOffice === i ? ' selected' : '');
+    btn.innerHTML = `<span class="office-icon">🏢</span>${name}`;
+    btn.onclick = () => {
+      selectedOffice = i;
+      buildOfficeList();
+      document.getElementById('btnStep3').disabled = false;
+    };
+    list.appendChild(btn);
+  });
+}
+
+// ── Office multi-select for ICP form (step 5) ───────────────────────────────
+function buildIcpOfficeBox() {
+  const box = document.getElementById('icpOfficeBox');
+  if (!box || !selectedProvince) return;
+  box.innerHTML = '';
+  const offices = PROVINCIAS[selectedProvince].oficinas;
+  offices.forEach((name, i) => {
+    const div = document.createElement('div');
+    div.className = 'office-multi-item' + (selectedOffices.includes(i) ? ' selected' : '');
+    div.innerHTML = `<span>${name}</span><span class="tick">✕</span>`;
+    div.onclick = () => {
+      if (selectedOffices.includes(i)) {
+        selectedOffices = selectedOffices.filter(x => x !== i);
+      } else {
+        selectedOffices.push(i);
+      }
+      buildIcpOfficeBox();
+    };
+    box.appendChild(div);
+  });
+}
+
+// ── Calendar (step 4) ────────────────────────────────────────────────────────
+function renderCalendar() {
+  document.getElementById('calTitle').textContent = `${MONTHS[calMonth]} ${calYear}`;
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  DAYS.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-day-name'; el.textContent = d;
+    grid.appendChild(el);
+  });
+  const first = new Date(calYear, calMonth, 1);
+  let startDay = first.getDay();
+  startDay = startDay === 0 ? 6 : startDay - 1;
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  for (let i = 0; i < startDay; i++) {
+    const el = document.createElement('div'); el.className = 'cal-day empty'; grid.appendChild(el);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(calYear, calMonth, d);
+    const el = document.createElement('div');
+    el.textContent = d;
+    let cls = 'cal-day';
+    if (date < today) cls += ' past';
+    else {
+      const ds = dateStr(date);
+      if (dateFrom && ds === dateFrom && dateTo && ds === dateTo) cls += ' start end';
+      else if (dateFrom && ds === dateFrom) cls += ' start';
+      else if (dateTo   && ds === dateTo)   cls += ' end';
+      else if (dateFrom && dateTo && ds > dateFrom && ds < dateTo) cls += ' in-range';
+      if (dateStr(date) === dateStr(today)) cls += ' today';
+      el.onclick = () => pickDate(ds);
+    }
+    el.className = cls;
+    grid.appendChild(el);
+  }
+}
+function prevMonth() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
+function nextMonth() { calMonth++; if (calMonth > 11) { calMonth = 0;  calYear++; } renderCalendar(); }
+function pickDate(ds) {
+  if (!dateFrom || (dateFrom && dateTo)) { dateFrom = ds; dateTo = null; }
+  else if (ds < dateFrom) { dateTo = dateFrom; dateFrom = ds; }
+  else { dateTo = ds; }
+  document.getElementById('displayFrom').textContent = fmtDate(dateFrom);
+  document.getElementById('displayTo').textContent   = fmtDate(dateTo);
+  document.getElementById('btnStep4').disabled = !(dateFrom && dateTo);
+  renderCalendar();
+}
+
+// ── Exclusion Calendar (ICP step 5) ─────────────────────────────────────────
+function renderExclCalendar() {
+  const titleEl = document.getElementById('exclTitle');
+  const grid    = document.getElementById('exclGrid');
+  if (!titleEl || !grid) return;
+  titleEl.textContent = `${MONTHS[exclMonth]} ${exclYear}`;
+  grid.innerHTML = '';
+  DAYS.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'excl-dname'; el.textContent = d;
+    grid.appendChild(el);
+  });
+  const first = new Date(exclYear, exclMonth, 1);
+  let startDay = first.getDay();
+  startDay = startDay === 0 ? 6 : startDay - 1;
+  const daysInMonth = new Date(exclYear, exclMonth + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+  for (let i = 0; i < startDay; i++) {
+    const el = document.createElement('div'); el.className = 'excl-day empty'; grid.appendChild(el);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(exclYear, exclMonth, d);
+    const ds = dateStr(date);
+    const el = document.createElement('div');
+    el.textContent = d;
+    if (date < today) { el.className = 'excl-day past'; }
+    else {
+      el.className = 'excl-day' + (excludedDates.includes(ds) ? ' excl' : '');
+      el.onclick = () => {
+        if (excludedDates.includes(ds)) excludedDates = excludedDates.filter(x => x !== ds);
+        else excludedDates.push(ds);
+        renderExclCalendar();
+      };
+    }
+    grid.appendChild(el);
+  }
+}
+
+// ── Skip date-range calendar: set defaults and jump to 4b ───────────────────
+function setDefaultDatesAndContinue() {
+  const today = new Date();
+  const sixMonths = new Date(today);
+  sixMonths.setMonth(sixMonths.getMonth() + 6);
+  dateFrom = dateStr(today);
+  dateTo   = dateStr(sixMonths);
+  goStep('4b');
+}
+
+// ── Step Navigation ──────────────────────────────────────────────────────────
+function goStep(n) {
+  if (n === 2)  buildTramiteList();
+  if (n === 3)  buildOfficeList();
+  if (n === 5)  buildIcpOfficeBox();
+
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const stepId = n === '4b' ? 'step4b' : 'step' + n;
+  document.getElementById(stepId).classList.add('active');
+
+  const num = n === '4b' ? 4 : parseInt(n);
+  document.querySelectorAll('.step-dot').forEach((d, i) => {
+    d.classList.remove('active', 'done');
+    if (i + 1 === num)   d.classList.add('active');
+    else if (i + 1 < num) d.classList.add('done');
+  });
+
+  // Step 5: full white ICP mode — hide dark header & progress
+  const isIcp = (n === 5);
+  document.body.style.background = isIcp ? '#fff' : '';
+  const header = document.querySelector('.header');
+  const progress = document.querySelector('.progress-wrap');
+  if (header)   header.style.display   = isIcp ? 'none' : '';
+  if (progress) progress.style.display = isIcp ? 'none' : '';
+
+  window.scrollTo(0, 0);
+}
+
+// ── Doc Type ─────────────────────────────────────────────────────────────────
+function setDoc(type) {
+  document.getElementById('doc_type').value = type;
+  document.querySelectorAll('input[name="icp_doc"]').forEach(r => r.checked = r.value === type);
+  const ph = { NIE:'Ej: X1234567A', DNI:'Ej: 12345678Z', PASAPORTE:'Ej: AB1234567' };
+  const el = document.getElementById('nie');
+  if (el) el.placeholder = ph[type] || 'Número de documento';
+}
+function detectDocType(val) {
+  val = val.trim().toUpperCase();
+  if (/^[XYZ]\d{7}[A-Z]?$/.test(val))    setDoc('NIE');
+  else if (/^\d{7,8}[A-Z]?$/.test(val))   setDoc('DNI');
+  else if (/^[A-Z]{1,2}\d{6,8}$/.test(val)) setDoc('PASAPORTE');
+}
+
+// ── Clave ────────────────────────────────────────────────────────────────────
+function setClave(type) {
+  document.getElementById('access_method').value = type;
+  document.getElementById('btn_sin').classList.toggle('sel', type === 'sin');
+  document.getElementById('btn_con').classList.toggle('sel', type === 'con');
+  document.getElementById('con_info').style.display = type === 'con' ? 'block' : 'none';
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function dateStr(d) { return d.toISOString().split('T')[0]; }
+function fmtDate(s) { if (!s) return '—'; const [y,m,d] = s.split('-'); return `${d}/${m}/${y}`; }
+
+// ── Submit ────────────────────────────────────────────────────────────────────
+async function submitBooking() {
+  // Validate
+  const nie     = document.getElementById('nie').value.trim();
+  const nombre  = document.getElementById('nombre').value.trim();
+  const anioEl  = document.getElementById('anio_nac');
+  const anio    = anioEl ? anioEl.value.trim() : '';
+  const tel     = document.getElementById('telefono').value.trim();
+  const email   = document.getElementById('email').value.trim();
+  const tgId    = document.getElementById('telegram_id').value.trim();
+  const nac     = document.getElementById('nacionalidad').value.trim();
+
+  let valid = true;
+  const req = (id, errId, msg) => {
+    const el = document.getElementById(id);
+    const er = document.getElementById(errId);
+    if (!el || !el.value.trim()) {
+      if (el) el.classList.add('err');
+      if (er) { er.textContent = msg; er.classList.add('show'); }
+      valid = false;
+    } else {
+      if (el) el.classList.remove('err');
+      if (er) er.classList.remove('show');
+    }
+  };
+
+  req('nie',    'err_nie',    'Introduce un documento valido');
+  req('nombre', 'err_nombre', 'Campo obligatorio');
+  req('telefono','err_tel',   'Campo obligatorio');
+
+  if (!anio || parseInt(anio) < 1940 || parseInt(anio) > 2010) {
+    document.getElementById('anio_nac')?.classList.add('err');
+    const er = document.getElementById('err_fecha');
+    if (er) { er.textContent = 'Introduce un año válido'; er.classList.add('show'); }
+    valid = false;
+  } else {
+    document.getElementById('anio_nac')?.classList.remove('err');
+    document.getElementById('err_fecha')?.classList.remove('show');
+  }
+
+  if (email && !/^[\w.-]+@[\w.-]+\.\w+$/.test(email)) {
+    document.getElementById('email').classList.add('err');
+    const er = document.getElementById('err_email');
+    if (er) { er.textContent = 'Email inválido'; er.classList.add('show'); }
+    valid = false;
+  } else {
+    document.getElementById('email')?.classList.remove('err');
+    document.getElementById('err_email')?.classList.remove('show');
+  }
+
+  if (!valid) { return; }
+
+  // Build fecha_nac
+  document.getElementById('fecha_nac').value = anio + '-01-01';
+
+  // Get date range from ICP form fields
+  const dfEl = document.getElementById('icp_date_from');
+  const dtEl = document.getElementById('icp_date_to');
+  const finalFrom = dfEl?.value || dateFrom;
+  const finalTo   = dtEl?.value || dateTo;
+
+  if (!finalFrom || !finalTo) {
+    alert('⚠️ Selecciona el rango de fechas.');
+    return;
+  }
+
+  const params    = new URLSearchParams(window.location.search);
+  const finalPid  = selectedProvince  || params.get('pid');
+  const finalTid  = selectedTramite   || params.get('tid');
+  let   finalOidx;
+  if (selectedOffices.length > 0) finalOidx = selectedOffices.join(',');
+  else if (selectedOffice !== null && selectedOffice !== undefined) finalOidx = selectedOffice;
+  else finalOidx = params.get('oidx') || 'ANY';
+
+  const obs = document.getElementById('observaciones')?.value.trim() || '';
+
+  const payload = {
+    province_id:   finalPid,
+    tramite_id:    String(finalTid),
+    oficina_idx:   String(finalOidx),
+    date_from:     finalFrom,
+    date_to:       finalTo,
+    excluded_dates: excludedDates,
+    doc_type:      document.getElementById('doc_type')?.value || 'NIE',
+    access_method: document.getElementById('access_method')?.value || 'sin',
+    nombre:        nombre,
+    apellido:      '',
+    nie:           nie.toUpperCase(),
+    fecha_nac:     document.getElementById('fecha_nac').value,
+    nacionalidad:  nac,
+    email:         email,
+    telefono:      tel,
+    telegram_id:   tgId,
+    observaciones: obs,
+    province_name: PROVINCIAS[finalPid]?.name || '',
+    tramite_name:  PROVINCIAS[finalPid]?.tramites[finalTid] || '',
+    oficina_name:  finalOidx === 'ANY' ? 'Cualquier oficina' : String(finalOidx),
+  };
+
+  const btn = document.querySelector('.btn-send') || document.querySelector('.btn-success');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
+
+  try {
+    const res  = await fetch('/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('bookingIdDisplay').textContent = data.booking_id;
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById('stepSuccess').classList.add('active');
+      document.querySelectorAll('.step-dot').forEach(d => d.classList.add('done'));
+      document.body.style.background = '';
+      const hdr = document.querySelector('.header');
+      const prg = document.querySelector('.progress-wrap');
+      if (hdr) hdr.style.display = '';
+      if (prg) prg.style.display = '';
+    } else {
+      alert('❌ Error: ' + (data.error || 'Intenta de nuevo'));
+      if (btn) { btn.disabled = false; btn.textContent = 'Enviar solicitud →'; }
+    }
+  } catch(e) {
+    alert('❌ Error de conexión. Verifica tu conexión e intenta de nuevo.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar solicitud →'; }
+  }
+}
+</script></body></html>
