@@ -176,8 +176,6 @@ class Database:
                 "UPDATE otp_sessions SET status='used' WHERE booking_id=?",
                 (booking_id,))
 
-db = Database()
-
     # ── Aliases for bot.py compatibility ──────────────────────────
     def create_booking(self, user_id, data):
         return self.save_booking(user_id, data,
@@ -197,3 +195,5 @@ db = Database()
     def update_booking_status(self, bid, status, result=None):
         result_str = json.dumps(result) if result else ""
         self.update_booking(bid, status, result=result_str)
+
+db = Database()
