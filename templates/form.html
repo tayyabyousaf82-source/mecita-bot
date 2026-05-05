@@ -492,7 +492,7 @@
   <div class="section-title">🏢 Selecciona la Oficina</div>
   <div class="office-list" id="officeList"></div>
   <button class="btn btn-back" onclick="goStep(2)">← Volver</button>
-  <button class="btn btn-primary" id="btnStep3" onclick="goStep(4)" disabled>Siguiente →</button>
+  <button class="btn btn-primary" id="btnStep3" onclick="setDefaultDatesAndContinue()" disabled>Siguiente →</button>
 </div>
 
 <!-- STEP 4: Date Range -->
@@ -537,7 +537,7 @@
     ℹ️ Con Cl@ve: el bot usará certificado digital instalado en el servidor. Cuando llegue al OTP, te notificará por Telegram.
   </div>
   <input type="hidden" id="access_method" value="sin"/>
-  <button class="btn btn-back" onclick="goStep(4)">← Volver</button>
+  <button class="btn btn-back" onclick="goStep(3)">← Volver</button>
   <button class="btn btn-primary" onclick="goStep(5)">Siguiente →</button>
 </div>
 
@@ -2667,7 +2667,7 @@ window.onload = function() {
       selectedTramite = parseInt(tid);
       if (oidx !== null) {
         selectedOffice = oidx === 'ANY' ? 'ANY' : parseInt(oidx);
-        setTimeout(() => goStep(4), 200);
+        setTimeout(() => { setDefaultDatesAndContinue(); }, 200);
       } else {
         setTimeout(() => goStep(3), 200);
       }
@@ -2858,6 +2858,16 @@ function renderExclCalendar() {
     }
     grid.appendChild(el);
   }
+}
+
+// ── Skip date-range calendar: set defaults and jump to 4b ───────────────────
+function setDefaultDatesAndContinue() {
+  const today = new Date();
+  const sixMonths = new Date(today);
+  sixMonths.setMonth(sixMonths.getMonth() + 6);
+  dateFrom = dateStr(today);
+  dateTo   = dateStr(sixMonths);
+  goStep('4b');
 }
 
 // ── Step Navigation ──────────────────────────────────────────────────────────
