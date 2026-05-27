@@ -792,7 +792,7 @@ def main():
         per_message=False,
     )
 
-    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("start", agregar_aviso))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("stop", stop_monitor))
     app.add_handler(CommandHandler("status", status))
